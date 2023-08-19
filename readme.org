@@ -59,3 +59,41 @@ and hexadecimal values of different byte patterns:
 |---------+-----------+-------------|
 |     231 | 1110 0111 |        0xE7 |
 |---------+-----------+-------------|
+
+** 2.4
+Without converting the numbers to decimal or binary, try to solve the
+following arithmetic problems, giving the answers in
+hexadecimal. Hint: Just modify the methods you use for performing
+decimal addition and subtraction to use base 16.
+
+A. 0x503c + 0x8 = 0x5044
+
+B. 0x503c - 0x40 = 0x4ffc
+
+C. 0x503c + 64 = 0x503c + 0x40 = 507c
+
+D. 0x50ea - 0x503c = 0xAE
+
+** 2.5
+Consider the following three calls to ~show_bytes~:
+
+#+begin_src C
+  int val = Ox8765432 1;
+  byte_pointer valp = (byte_pointer) &val;
+  show_bytes(valp , 1);
+  show_bytes(valp , 2);
+  show_bytes(valp , 3);
+#+end_src
+
+Indicate the values that will be printed by each call on a
+little-endian machine and on a big-endian machine:
+
+|   | Little endiand | Big endian |
+|---+----------------+------------|
+| A |             21 |         87 |
+|---+----------------+------------|
+| B |           2143 |       8765 |
+|---+----------------+------------|
+| C |         214365 |     876543 |
+
+
