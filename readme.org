@@ -37,21 +37,21 @@ A single byte can be represented by 2 hexadecimal digits. Fill in the
 missing entries in the following table, giving the decimal, binary,
 and hexadecimal values of different byte patterns:
 
-| Decimal |    Binary | Hexadecimal |
+| Decimal | Binary    | Hexadecimal |
 |---------+-----------+-------------|
 |       0 | 0000 0000 |        0x00 |
 |---------+-----------+-------------|
-|     167 |  10100010 |        0xA7 |
+|     167 | 10100010  |        0xA7 |
 |---------+-----------+-------------|
-|      62 |    111110 |        0x3E |
+|      62 | 111110    |        0x3E |
 |---------+-----------+-------------|
-|     188 |  10111100 |        0xBC |
+|     188 | 10111100  |        0xBC |
 |---------+-----------+-------------|
-|      55 |  00110111 |        0x37 |
+|      55 | 00110111  |        0x37 |
 |---------+-----------+-------------|
 |     136 | 1000 1000 |        0x88 |
 |---------+-----------+-------------|
-|     243 |  11110011 |        0xF3 |
+|     243 | 11110011  |        0xF3 |
 |---------+-----------+-------------|
 |      82 | 0101 0010 |        0x52 |
 |---------+-----------+-------------|
@@ -78,7 +78,7 @@ D. 0x50ea - 0x503c = 0xAE
 Consider the following three calls to ~show_bytes~:
 
 #+begin_src C
-  int val = Ox8765432 1;
+  int val = Ox87654321;
   byte_pointer valp = (byte_pointer) &val;
   show_bytes(valp , 1);
   show_bytes(valp , 2);
@@ -97,3 +97,29 @@ little-endian machine and on a big-endian machine:
 | C |         214365 |     876543 |
 
 
+** 2.7
+#+begin_quote
+What would be printed as a result of the following call to show_bytes?
+
+#+begin_src C
+  const char *s = "abcdef";
+  show_bytes((byte_pointer) s, strlen(s));
+#+end_src
+
+#+RESULTS:
+
+Note that letters 'a ' through 'z' have ASCII codes 0x61 through 0x7A.
+#+end_quote
+
+61 62 63 64 65 66.
+
+** 2.8
+a: [01101001]
+b: [01010101]
+
+~a: [10010110]
+~b: [10101010]
+
+a & b: [01000001]
+a | b: [01111101]
+a ^ b: [00111100]
