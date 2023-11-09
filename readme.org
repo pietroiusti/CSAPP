@@ -1,5 +1,6 @@
-* Practice problems
-** 2.1
+* Representing and Manipulation information
+** Practice problems
+*** 2.1
 - A. Ox39A7F8
   In binary: 0011 1001 1010 0111 1111 1000
 
@@ -12,7 +13,7 @@
 - D. 10 0110 1110 0111 1011 0101
   In hex: 0x26E7B5
 
-** 2.2
+*** 2.2
 Fill in the blank entries in the following table, giving the decimal
 and hexadecimal representations of different powers of 2:
 
@@ -32,7 +33,7 @@ and hexadecimal representations of different powers of 2:
 |----+---------------+-------------------|
 |  7 |           128 |              0x80 |
 
-** 2.3
+*** 2.3
 A single byte can be represented by 2 hexadecimal digits. Fill in the
 missing entries in the following table, giving the decimal, binary,
 and hexadecimal values of different byte patterns:
@@ -60,7 +61,7 @@ and hexadecimal values of different byte patterns:
 |     231 | 1110 0111 |        0xE7 |
 |---------+-----------+-------------|
 
-** 2.4
+*** 2.4
 Without converting the numbers to decimal or binary, try to solve the
 following arithmetic problems, giving the answers in
 hexadecimal. Hint: Just modify the methods you use for performing
@@ -74,7 +75,7 @@ C. 0x503c + 64 = 0x503c + 0x40 = 507c
 
 D. 0x50ea - 0x503c = 0xAE
 
-** 2.5
+*** 2.5
 Consider the following three calls to ~show_bytes~:
 
 #+begin_src C
@@ -97,7 +98,7 @@ little-endian machine and on a big-endian machine:
 | C |         214365 |     876543 |
 
 
-** 2.7
+*** 2.7
 #+begin_quote
 What would be printed as a result of the following call to show_bytes?
 
@@ -113,7 +114,7 @@ Note that letters 'a ' through 'z' have ASCII codes 0x61 through 0x7A.
 
 61 62 63 64 65 66.
 
-** 2.8
+*** 2.8
 a: [01101001]
 b: [01010101]
 
@@ -124,7 +125,7 @@ a & b: [01000001]
 a | b: [01111101]
 a ^ b: [00111100]
 
-** 2.18
+*** 2.18
 A: 0x2e0 = 0000001011100000 = 736.
 
 B: 0x58 = 0000000001011000 = 88.
@@ -142,3 +143,96 @@ G: 0x1f8 = 0000000111111000 = 504.
 H: 0xC0 = 0000000011000000 = 192.
 
 I: 0x48 = 0000000001001000 = 72.
+
+*** 2.19
+* Machine-Level Representation of Programs
+#+begin_src C
+  long mult2(long , long);
+
+  void multstore(long x, long y, long *dest) {
+    long t = mult2(x, y);
+    *dest = t;
+  }
+#+end_src
+
+We can run ~gcc -Og -S mstore.c~ to generate the assembly code. The
+file ~mstore.s~ with the following content is generated:
+
+#+begin_src asm
+          .file	"mstore.c"
+          .text
+          .globl	multstore
+          .type	multstore, @function
+  multstore:
+          .LFB0:
+          .cfi_startproc
+          pushq	%rbx
+          .cfi_def_cfa_offset 16
+          .cfi_offset 3, -16
+          movq	%rdx, %rbx
+          call	mult2@PLT
+          movq	%rax, (%rbx)
+          popq	%rbx
+          .cfi_def_cfa_offset 8
+          ret
+          .cfi_endproc
+          .LFE0:
+          .size	multstore, .-multstore
+          .ident	"GCC: (GNU) 13.2.1 20230801"
+          .section	.note.GNU-stack,"",@progbits
+#+end_src
+
+We can use the -c option to compile and assemble: ~gcc -Og -c
+mstore.c~. Now the file ~mstore.o~ is generate too. This file is 1,368
+bytes and contains the 14-byt sequence with the following hexadecimal
+representation:
+#+begin_src
+53 48 89 d3 e8 00 00 00 00 48 89 03 5b c3
+#+end_src
+
+We can use ~objdump~ to disassemble: ~objdump -d mstore.o~. This is
+the output:
+
+#+begin_src
+mstore.o:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 <multstore>:
+   0:	53                   	push   %rbx
+   1:	48 89 d3             	mov    %rdx,%rbx
+   4:	e8 00 00 00 00       	call   9 <multstore+0x9>
+   9:	48 89 03             	mov    %rax,(%rbx)
+   c:	5b                   	pop    %rbx
+   d:	c3                   	ret
+#+end_src
+
+The last thing to do to get the actual executable code is running a
+linker. The linker must be run on the set of object-code files, one of
+which must contain a ~main~ function.
+
+Let's then create a ~main.c~ file:
+
+#+begin_src C
+  #include <stdio.h>
+
+  void multstore(long, long, long *);
+
+  int main() {
+    long d;
+    multstore(2, 3, &d);
+    printf("2 * 3 --> %ld\n", d);
+    return 0;
+  }
+
+  long mult2(long a, long b) {
+    long s = a * b;
+    return s;
+  }
+#+end_src
+
+We can generate an executable named ~prog~ with: ~gcc -Og -o prog
+main.c mstore.c~.
+
+Let's also disassemble the file prog: ~objdump -d prog~...
