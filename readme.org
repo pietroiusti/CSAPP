@@ -236,3 +236,155 @@ We can generate an executable named ~prog~ with: ~gcc -Og -o prog
 main.c mstore.c~.
 
 Let's also disassemble the file prog: ~objdump -d prog~...
+** Practice problems
+*** 3.4
+Assume variables ~sp~ and ~dp~ are declared with types
+
+#+begin_src C
+  src_t *sp;
+  dest_t *dp;
+#+end_src
+
+where ~src_t~ and ~dest_t~ are data types declared with ~typedef~. We
+wish to use the appropriate pair of data mvoement instructions to
+implement the operation
+
+#+begin_src C
+  *dp = (dest_t) *sp;
+#+end_src
+
+Assume that the values of ~sp~ and ~dp~ are stored in registers ~%rdi~
+and ~%rsi~, respectively. For each entry in the table, show the two
+instructions that implement the specified data movement. The first
+instruction in the sequence should read from memory, do the
+appropriate conversion, and set the appropriate portion of register
+~%rax~. The second instruction should then write the appropriate
+portion of ~%rax~ to memory. In both cases, the portions may be
+~%rax~, ~%eax~, ~%ax~, or ~%al~, and they may differ from one another.
+
+Recall that when performing a cast that involves both a size change
+and a change in ``signedness'' in C, the operation should change the
+size first (Section 2.2.6).
+
+| src_t | dest_t | Instruction       |
+|-------+--------+-------------------|
+| long  | long   | movq (%rdi), %rax |
+|       |        | movq %rax, (%rsi) |
+
+- Explanation:
+  the C statement is this
+  #+begin_src C
+    *dp = *sp;
+  #+end_src
+
+  where dp and sp are defined as follows:
+
+  #+begin_src C
+    typedef long src_t;
+    typedef long dest_t;
+
+    src_t *sp;
+    dest_t *dp;
+  #+end_src
+
+  The operation to perform (~*dp = *sp;~) is that of moving the data
+  in memory at the address stored in ~sp~ into another location in
+  memory; the location at the address store in ~dp~.
+
+  The get the data in memory at the address stored in ~sp~ we can use
+  ~(%rsi)~. ~%rsi~, by definition, is the register in which ~sp~ is
+  stored. Wrapping into parenthesis means: the location in memory with
+  the address stored in ~%rsi~.
+
+  We cannot simply move the data from a location in memory into
+  another location in memory. In fact we are told to use the register
+  ~%rax~ as an intermediary step.
+
+  The data we are moving is 8 bytes (a ``quad word'') so we can use
+  ~movq~:
+
+  #+begin_src asm
+            movq (%rdi), %rax
+  #+end_src
+
+  With that, we have the moved 8 bytes from the source into one
+  register. The next step consists in moving those bytes into another
+  location in memory; that location by definition is at the address
+  stored in %rsi.
+
+  So, the second instruction is:
+
+  #+begin_src asm
+            movq %rax, (%rsi)
+  #+end_src
+
+| src_t | dest_t | Instruction         |
+|-------+--------+---------------------|
+| char  | int    | movsbl (%rdi), %eax |
+|       |        | movl %eax, (%rsi)   |
+
+Comment: in this case, we first need to convert the char into an
+int. This means converting 1 byte (see the ~b~ in ~movsbl~) to 4 bytes
+(see the ~l~ in ~movsbl~). Given that the value is signed, this
+operation is performed by sign extension (see the ~s~ in ~movsbl~),
+not by zero extension (~z~).
+
+| src_t | dest_t   | Instruction         |
+|-------+----------+---------------------|
+| char  | unsigned | movsbl (%rdi), %eax |
+|       |          | movl %eax, (%rsi)   |
+
+Comment: the comment about the previous case applies here too.
+
+| src_t         | dest_t | Instruction         |
+|---------------+--------+---------------------|
+| unsigned char | long   | movzbl (%rdi), %eax |
+|               |        | movq %rax, (%rsi)   |
+
+Comment: here we want to extend a unsigned char (one byte) to a long
+(eight bytes). Given that it is an unsigned value, we use zero
+extension, not sign extension. Then why ~movzbl (%rdi), %eax~ instead
+of ~movzbq (%rdi), %rax~?
+
+Here is what Authors say in Errata
+(https://web.archive.org/web/20230813064349/http://csapp.cs.cmu.edu/3e/errata.html):
+
+#+begin_quote
+p. 184, (Clarification, not an erratum) Figure 3.5. Although there is
+an instruction movzbq, the GCC compiler typically generates the
+instruction movzbl for this purpose, relying on the property that an
+instruction generating a 4-byte with a register as destination will
+fill the upper 4 bytes of the register with zeros.  Posted
+04/27/2018. Randal Bryant
+
+(Clarification, not an erratum) p. 326, Solution to Problem 3.4,
+seventh line of code. The GCC compiler generates the instruction
+movzbl for this case, even though the goal is to extend the 1-byte
+value to 8 bytes. See the note on Figure 3.5 (p. 184).  Posted
+04/27/2018. Randal Bryant
+#+end_quote
+
+| src_t | dest_t | Instruction       |
+|-------+--------+-------------------|
+| int   | char   | movl (%rdi), %eax |
+|       |        | movb %al, (%rsi)  |
+
+Comment: here we first move the whole 4 bytes into the 4-byte portion
+of %rax. Then we just store the the content of %al (the first byte of
+%rax).
+
+| src_t    | dest_t        | Instruction       |
+|----------+---------------+-------------------|
+| unsigned | unsigned char | movl (%rdi), %eax |
+|          |               | movb %al, (%rsi)  |
+
+Comment: none. Notice though that these are the same instructions as
+before.
+
+| src_t | dest_t | Instruction        |
+|-------+--------+--------------------|
+| char  | short  | movsbw (%rdi), %ax |
+|       |        | movw %ax, (%rsi)   |
+
+Comment: we want to upgrade a char (one byte) (~b~) to a short (two
+bytes) (~w~). Since it's a signed value we use sign extension (~s~).
