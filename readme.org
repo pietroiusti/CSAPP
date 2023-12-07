@@ -406,3 +406,61 @@ in %rdx for each of the given assembly-code instructions:
 | leaq 0xA(,%rcx,4), %rdx   | 10 + 4y    |
 |---------------------------+------------|
 | leaq 9(%rax,%rcx,2), %rdx | 9 + x + 2y |
+*** 3.16
+*Problem*:
+
+#+begin_quote
+When given the C code
+
+#+begin_src C
+  void cond (long a, long *p) {
+    if (p && a > *p) {
+      *p = a;
+    }
+  }
+#+end_src
+
+GCC generates the following assembly code:
+
+#+begin_src asm
+cond:
+        testq   %rsi, %rsi
+        je      .L1
+        cmpq    %rdi, (%rsi)
+        jge     .L1
+        movq    %rdi, (%rsi)
+.L1:
+        ret
+#+end_src
+
+A. Write a goto version in C that performs the same computation and
+mimics the control flow of the assembly code, in the style shown in
+Figure 3.16(b).  You might find it helpful to first annotate the
+assembly code as we have done in our examples.
+
+B. Explain why the assembly code contains two conditional branches,
+even though the C code has only one if statement.
+
+#+end_quote
+
+*Answer*:
+
+#+begin_src C
+
+  void cond(long a, long *p) {
+
+    if (p == 0) {
+      goto done;
+    }
+
+    if (*p >= a) {
+      goto done;
+    }
+
+    *p = a;
+
+    done:
+      return;
+  }
+
+#+end_src
