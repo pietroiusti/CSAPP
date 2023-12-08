@@ -464,3 +464,42 @@ even though the C code has only one if statement.
   }
 
 #+end_src
+*** 3.17
+*Problem*:
+
+#+begin_quote
+An alternate rule for translating ~if~ statements into goto code is as
+follows:
+
+#+begin_src C
+  t = test-expr;
+  if (t)
+    goto true/;
+  else-statement;
+  goto done;
+  true:
+      then-statement
+  done:
+#+end_src
+#+end_quote
+
+A. Rewrite the goto version of ~absdiff_se~ based on this alternate rule.
+
+B. Can you think of any reasons for choosing one rule over the other?
+
+*Answer*:
+
+#+begin_src C
+  long gotodiff_se_alt(long x, long y) {
+    long result;
+    if (x < y)
+      goto true;
+    ge_cnt++;
+    result = x - y;
+    return result;
+    true:
+      lt_cnt++;
+      result = y - x;
+      return result;
+  }
+#+end_src
