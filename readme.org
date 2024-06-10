@@ -670,3 +670,14 @@ You can run ~gcc~ using the ~-v~ options to see the steps ~gcc~ takes.
 |-------------------+-------------------+------------------|
 |                54 | 2^54 = 16P        | 2^(54)-1 = 16P-1 |
 #+end_src
+* System-Level I/O
+** Opening and closing files
+- ~open~
+** Reading and Writing files
+- ~read~
+- ~write~
+- Authors also show several reading and writing function that they
+  consider ``robust''. Some perform ``buffered'' operations.
+** Reading File Metadata
+- ~stat~
+- ~fstat~
