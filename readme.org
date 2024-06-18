@@ -681,3 +681,20 @@ You can run ~gcc~ using the ~-v~ options to see the steps ~gcc~ takes.
 ** Reading File Metadata
 - ~stat~
 - ~fstat~
+* Network Programming
+** Practice Problem 11.1
+Complete the following table:
+
+| Hex address | Dotted-decimal address |
+|-------------+------------------------|
+|         0x0 |                0.0.0.0 |
+|-------------+------------------------|
+|  0xffffffff |        255.255.255.255 |
+|-------------+------------------------|
+|  0x7f000001 |              127.0.0.1 |
+|-------------+------------------------|
+|  0xcdbca079 |        205.188.160.121 |
+|-------------+------------------------|
+|  0x400c950d |           64.12.149.13 |
+|-------------+------------------------|
+|  0xcdbc9217 |         205.188.146.23 |
