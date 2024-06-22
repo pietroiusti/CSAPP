@@ -698,3 +698,101 @@ Complete the following table:
 |  0x400c950d |           64.12.149.13 |
 |-------------+------------------------|
 |  0xcdbc9217 |         205.188.146.23 |
+
+** Practice Problem 11.2
+#+begin_quote
+Write a program ~hex2dd.c~ that converts its hex argument to a
+dotted-decimal string and prints the result. For example:
+
+#+begin_src bash
+  linux> ./hex2dd 0x8002c2f2
+  128.2.194.242
+#+end_src
+#+end_quote
+
+#+begin_src C
+  /*
+    Covert hex argument to a dotted-decimal string and print it.
+
+    (Practice problem 11.2)
+  */
+
+  #include <stdint.h>
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <arpa/inet.h>
+
+  #define MAXBUF 100
+
+  int main(int argc, char* argv[]) {
+
+      struct in_addr inaddr; /* Address in network byte order (big endian)*/
+      uint32_t addr;         /* Address in host byter order */
+      char buf[MAXBUF];      /* Buffer for dotted-decimal string */
+
+      if (argc != 2) {
+          fprintf(stderr, "usage: %s <hex number>\n", argv[0]);
+          exit(0);
+      }
+      sscanf(argv[1], "%x", &addr); // scan input
+
+      inaddr.s_addr = htonl(addr); // convert input into network order
+                                   // and store it in to in_addr structure
+
+      if (!inet_ntop(AF_INET, &inaddr, buf, MAXBUF)) { // convert to dotted-decimal
+          printf("error: inet_ntop\n");
+          exit(1);
+      }
+      printf("%s\n", buf);
+
+      return 0;
+  }
+#+end_src
+
+** Practice Problem 11.3
+#+begin_quote
+Write a program ~dd2hex.c~  that converts its dotted-decimal argument
+to a hex number and prints the result. For example,
+
+#+begin_src bash
+  linux> ./dd2hex 128.2.194.242
+  0x8002c2f2
+#+end_src
+#+end_quote
+
+#+begin_src C
+  /*
+    Convert dotted-decimal argument to a hex number and print it.
+
+    (Practice problem 11.3)
+  */
+
+  #include <arpa/inet.h>
+  #include <netinet/in.h>
+  #include <stdint.h>
+  #include <stdio.h>
+  #include <stdlib.h>
+
+  #define MAXBUF 100
+
+  int main(int argc, char *argv[]) {
+      if (argc != 2) {
+          fprintf(stderr, "usage: %s <dotted-decimal value>\n", argv[0]);
+          exit(0);
+      }
+
+      struct in_addr inaddr; /* Address in network bite order (big endian) */
+
+      if (!inet_pton(AF_INET, argv[1], &inaddr)) {
+          printf("error: inet_pton\n");
+          exit(1);
+
+      }
+
+      uint32_t addr = ntohl(inaddr.s_addr); // address in host order
+
+      printf("0x%x\n", addr);
+
+      return 0;
+  }
+#+end_src
