@@ -143,7 +143,11 @@ NOTES:
  *   Rating: 1
  */
 int bitXor(int x, int y) {
-  return 2;
+    /* given two bits x and y, xor is true iff it is not the case that
+       both x and y are true and it is not the case that both x and y
+       are false, so:
+     */
+    return ~(x & y) & ~(~x & ~y);
 }
 /* 
  * tmin - return minimum two's complement integer 
@@ -152,9 +156,12 @@ int bitXor(int x, int y) {
  *   Rating: 1
  */
 int tmin(void) {
-
-  return 2;
-
+    /* tmin is made of a leading 1 and all 0s, so we can just take a
+       an int whose list significant bit is 1, and left-shift it 31
+       times so to move that 1 on the left and have all 0s on its
+       right. */
+    int res = 0xff;
+    return res << 31;;
 }
 //2
 /*
@@ -165,7 +172,8 @@ int tmin(void) {
  *   Rating: 1
  */
 int isTmax(int x) {
-  return 2;
+    // after a bunch of attempts:
+    return !((x^(x+1))+1) & !!(x+1);
 }
 /* 
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
