@@ -1,0 +1,914 @@
+* Representing and Manipulation information
+- Converting between binary and hexadecimal is straightforward, since
+  it can be performed one hexadecimal digit at a time.
+
+- Coverting between decimal and hexadecimal representations requires
+  using multiplication or division to handle the general case.
+
+- Every computer has a /word size/, indicating the nominal size of
+  pointer data.
+  - Since a virtual address is encoded by such a word, the most
+    important system parameter determined by the word size is the
+    maximum size of the virtual address space. (A machine with a w-bit
+    word size will have a virtual addresses ranging from 0 to
+    (2^w)-1.)
+
+- There are ``typical'' sizes of C data types, but there might be
+  differet in different machines. To avoid problems, ISO C99
+  introduces ~int32_t~ and ~int64_t~.
+
+  [[./figures/typical_c_sizes.png]]
+
+- Two conventions for ordering bytes representing an object: /little
+  endian/, /big endian/.
+  - Usually one is not concerned with this. But, one is, for example
+    in the context of:
+    - networking;
+    - inspecting machine-level programs;
+    - circumventing the normal type system, by using a /cast/ or a
+      /union/.
+
+- A string in C is encoded by an array of characters terminated by the
+  null (having value 0) character.
+
+- ``A fundamental concept of computer systems is that a program, from
+  the perspective of the machine, is simply a sequence of bytes''.
+
+** Practice problems
+*** 2.1
+- A. Ox39A7F8
+  In binary: 0011 1001 1010 0111 1111 1000
+
+- B. 1100 1001 0111 1011
+  In hex: 0xC97B
+
+- C. OxD5E4C
+  In binary: 1101 0101 1110 0100 1100
+
+- D. 10 0110 1110 0111 1011 0101
+  In hex: 0x26E7B5
+
+*** 2.2
+Fill in the blank entries in the following table, giving the decimal
+and hexadecimal representations of different powers of 2:
+
+|  n | 2^n (decimal) | 2^n (hexadecimal) |
+|----+---------------+-------------------|
+|  9 |           512 |             0x200 |
+|----+---------------+-------------------|
+| 19 |        524288 |           0x80000 |
+|----+---------------+-------------------|
+| 14 |         16384 |            0x4000 |
+|----+---------------+-------------------|
+| 16 |         65536 |           0x10000 |
+|----+---------------+-------------------|
+| 17 |        131072 |           0x20000 |
+|----+---------------+-------------------|
+|  4 |            32 |              0x20 |
+|----+---------------+-------------------|
+|  7 |           128 |              0x80 |
+
+*** 2.3
+A single byte can be represented by 2 hexadecimal digits. Fill in the
+missing entries in the following table, giving the decimal, binary,
+and hexadecimal values of different byte patterns:
+
+| Decimal | Binary    | Hexadecimal |
+|---------+-----------+-------------|
+|       0 | 0000 0000 |        0x00 |
+|---------+-----------+-------------|
+|     167 | 10100010  |        0xA7 |
+|---------+-----------+-------------|
+|      62 | 111110    |        0x3E |
+|---------+-----------+-------------|
+|     188 | 10111100  |        0xBC |
+|---------+-----------+-------------|
+|      55 | 00110111  |        0x37 |
+|---------+-----------+-------------|
+|     136 | 1000 1000 |        0x88 |
+|---------+-----------+-------------|
+|     243 | 11110011  |        0xF3 |
+|---------+-----------+-------------|
+|      82 | 0101 0010 |        0x52 |
+|---------+-----------+-------------|
+|     172 | 1010 1100 |        0xAC |
+|---------+-----------+-------------|
+|     231 | 1110 0111 |        0xE7 |
+|---------+-----------+-------------|
+
+*** 2.4
+Without converting the numbers to decimal or binary, try to solve the
+following arithmetic problems, giving the answers in
+hexadecimal. Hint: Just modify the methods you use for performing
+decimal addition and subtraction to use base 16.
+
+A. 0x503c + 0x8 = 0x5044
+
+B. 0x503c - 0x40 = 0x4ffc
+
+C. 0x503c + 64 = 0x503c + 0x40 = 507c
+
+D. 0x50ea - 0x503c = 0xAE
+
+*** 2.5
+Consider the following three calls to ~show_bytes~:
+
+#+begin_src C
+  int val = 0x87654321;
+  byte_pointer valp = (byte_pointer) &val;
+  show_bytes(valp , 1);
+  show_bytes(valp , 2);
+  show_bytes(valp , 3);
+#+end_src
+
+Indicate the values that will be printed by each call on a
+little-endian machine and on a big-endian machine:
+
+|   | Little endiand | Big endian |
+|---+----------------+------------|
+| A |             21 |         87 |
+|---+----------------+------------|
+| B |           2143 |       8765 |
+|---+----------------+------------|
+| C |         214365 |     876543 |
+
+*** 2.7
+#+begin_quote
+What would be printed as a result of the following call to show_bytes?
+
+#+begin_src C
+  const char *s = "abcdef";
+  show_bytes((byte_pointer) s, strlen(s));
+#+end_src
+
+#+RESULTS:
+
+Note that letters 'a ' through 'z' have ASCII codes 0x61 through 0x7A.
+#+end_quote
+
+61 62 63 64 65 66.
+
+*** 2.8
+a: [01101001]
+b: [01010101]
+
+~a: [10010110]
+~b: [10101010]
+
+a & b: [01000001]
+a | b: [01111101]
+a ^ b: [00111100]
+
+*** 2.18
+A: 0x2e0 = 0000001011100000 = 736.
+
+B: 0x58 = 0000000001011000 = 88.
+
+C: 0x28 = 0000000000101000 = 40.
+
+D: 0x30 = 0000000000110000 = 48.
+
+E: 0x78 = 0000000001111000 = 120.
+
+F: 0x88 = 0000000010001000 = 136
+
+G: 0x1f8 = 0000000111111000 = 504.
+
+H: 0xC0 = 0000000011000000 = 192.
+
+I: 0x48 = 0000000001001000 = 72.
+
+*** 2.19
+* Machine-Level Representation of Programs
+#+begin_src C
+  long mult2(long , long);
+
+  void multstore(long x, long y, long *dest) {
+    long t = mult2(x, y);
+    *dest = t;
+  }
+#+end_src
+
+We can run ~gcc -Og -S mstore.c~ to generate the assembly code. The
+file ~mstore.s~ with the following content is generated:
+
+#+begin_src asm
+          .file	"mstore.c"
+          .text
+          .globl	multstore
+          .type	multstore, @function
+  multstore:
+          .LFB0:
+          .cfi_startproc
+          pushq	%rbx
+          .cfi_def_cfa_offset 16
+          .cfi_offset 3, -16
+          movq	%rdx, %rbx
+          call	mult2@PLT
+          movq	%rax, (%rbx)
+          popq	%rbx
+          .cfi_def_cfa_offset 8
+          ret
+          .cfi_endproc
+          .LFE0:
+          .size	multstore, .-multstore
+          .ident	"GCC: (GNU) 13.2.1 20230801"
+          .section	.note.GNU-stack,"",@progbits
+#+end_src
+
+We can use the -c option to compile and assemble: ~gcc -Og -c
+mstore.c~. Now the file ~mstore.o~ is generate too. This file is 1,368
+bytes and contains the 14-byt sequence with the following hexadecimal
+representation:
+#+begin_src
+53 48 89 d3 e8 00 00 00 00 48 89 03 5b c3
+#+end_src
+
+We can use ~objdump~ to disassemble: ~objdump -d mstore.o~. This is
+the output:
+
+#+begin_src
+mstore.o:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 <multstore>:
+   0:	53                   	push   %rbx
+   1:	48 89 d3             	mov    %rdx,%rbx
+   4:	e8 00 00 00 00       	call   9 <multstore+0x9>
+   9:	48 89 03             	mov    %rax,(%rbx)
+   c:	5b                   	pop    %rbx
+   d:	c3                   	ret
+#+end_src
+
+The last thing to do to get the actual executable code is running a
+linker. The linker must be run on the set of object-code files, one of
+which must contain a ~main~ function.
+
+Let's then create a ~main.c~ file:
+
+#+begin_src C
+  #include <stdio.h>
+
+  void multstore(long, long, long *);
+
+  int main() {
+    long d;
+    multstore(2, 3, &d);
+    printf("2 * 3 --> %ld\n", d);
+    return 0;
+  }
+
+  long mult2(long a, long b) {
+    long s = a * b;
+    return s;
+  }
+#+end_src
+
+We can generate an executable named ~prog~ with: ~gcc -Og -o prog
+main.c mstore.c~.
+
+Let's also disassemble the file prog: ~objdump -d prog~...
+** Practice problems
+*** 3.4
+Assume variables ~sp~ and ~dp~ are declared with types
+
+#+begin_src C
+  src_t *sp;
+  dest_t *dp;
+#+end_src
+
+where ~src_t~ and ~dest_t~ are data types declared with ~typedef~. We
+wish to use the appropriate pair of data mvoement instructions to
+implement the operation
+
+#+begin_src C
+  *dp = (dest_t) *sp;
+#+end_src
+
+Assume that the values of ~sp~ and ~dp~ are stored in registers ~%rdi~
+and ~%rsi~, respectively. For each entry in the table, show the two
+instructions that implement the specified data movement. The first
+instruction in the sequence should read from memory, do the
+appropriate conversion, and set the appropriate portion of register
+~%rax~. The second instruction should then write the appropriate
+portion of ~%rax~ to memory. In both cases, the portions may be
+~%rax~, ~%eax~, ~%ax~, or ~%al~, and they may differ from one another.
+
+Recall that when performing a cast that involves both a size change
+and a change in ``signedness'' in C, the operation should change the
+size first (Section 2.2.6).
+
+| src_t | dest_t | Instruction       |
+|-------+--------+-------------------|
+| long  | long   | movq (%rdi), %rax |
+|       |        | movq %rax, (%rsi) |
+
+- Explanation:
+  the C statement is this
+  #+begin_src C
+    *dp = *sp;
+  #+end_src
+
+  where dp and sp are defined as follows:
+
+  #+begin_src C
+    typedef long src_t;
+    typedef long dest_t;
+
+    src_t *sp;
+    dest_t *dp;
+  #+end_src
+
+  The operation to perform (~*dp = *sp;~) is that of moving the data
+  in memory at the address stored in ~sp~ into another location in
+  memory; the location at the address store in ~dp~.
+
+  The get the data in memory at the address stored in ~sp~ we can use
+  ~(%rsi)~. ~%rsi~, by definition, is the register in which ~sp~ is
+  stored. Wrapping into parenthesis means: the location in memory with
+  the address stored in ~%rsi~.
+
+  We cannot simply move the data from a location in memory into
+  another location in memory. In fact we are told to use the register
+  ~%rax~ as an intermediary step.
+
+  The data we are moving is 8 bytes (a ``quad word'') so we can use
+  ~movq~:
+
+  #+begin_src asm
+            movq (%rdi), %rax
+  #+end_src
+
+  With that, we have the moved 8 bytes from the source into one
+  register. The next step consists in moving those bytes into another
+  location in memory; that location by definition is at the address
+  stored in %rsi.
+
+  So, the second instruction is:
+
+  #+begin_src asm
+            movq %rax, (%rsi)
+  #+end_src
+
+| src_t | dest_t | Instruction         |
+|-------+--------+---------------------|
+| char  | int    | movsbl (%rdi), %eax |
+|       |        | movl %eax, (%rsi)   |
+
+Comment: in this case, we first need to convert the char into an
+int. This means converting 1 byte (see the ~b~ in ~movsbl~) to 4 bytes
+(see the ~l~ in ~movsbl~). Given that the value is signed, this
+operation is performed by sign extension (see the ~s~ in ~movsbl~),
+not by zero extension (~z~).
+
+| src_t | dest_t   | Instruction         |
+|-------+----------+---------------------|
+| char  | unsigned | movsbl (%rdi), %eax |
+|       |          | movl %eax, (%rsi)   |
+
+Comment: the comment about the previous case applies here too.
+
+| src_t         | dest_t | Instruction         |
+|---------------+--------+---------------------|
+| unsigned char | long   | movzbl (%rdi), %eax |
+|               |        | movq %rax, (%rsi)   |
+
+Comment: here we want to extend a unsigned char (one byte) to a long
+(eight bytes). Given that it is an unsigned value, we use zero
+extension, not sign extension. Then why ~movzbl (%rdi), %eax~ instead
+of ~movzbq (%rdi), %rax~?
+
+Here is what Authors say in Errata
+(https://web.archive.org/web/20230813064349/http://csapp.cs.cmu.edu/3e/errata.html):
+
+#+begin_quote
+p. 184, (Clarification, not an erratum) Figure 3.5. Although there is
+an instruction movzbq, the GCC compiler typically generates the
+instruction movzbl for this purpose, relying on the property that an
+instruction generating a 4-byte with a register as destination will
+fill the upper 4 bytes of the register with zeros.  Posted
+04/27/2018. Randal Bryant
+
+(Clarification, not an erratum) p. 326, Solution to Problem 3.4,
+seventh line of code. The GCC compiler generates the instruction
+movzbl for this case, even though the goal is to extend the 1-byte
+value to 8 bytes. See the note on Figure 3.5 (p. 184).  Posted
+04/27/2018. Randal Bryant
+#+end_quote
+
+| src_t | dest_t | Instruction       |
+|-------+--------+-------------------|
+| int   | char   | movl (%rdi), %eax |
+|       |        | movb %al, (%rsi)  |
+
+Comment: here we first move the whole 4 bytes into the 4-byte portion
+of %rax. Then we just store the the content of %al (the first byte of
+%rax).
+
+| src_t    | dest_t        | Instruction       |
+|----------+---------------+-------------------|
+| unsigned | unsigned char | movl (%rdi), %eax |
+|          |               | movb %al, (%rsi)  |
+
+Comment: none. Notice though that these are the same instructions as
+before.
+
+| src_t | dest_t | Instruction        |
+|-------+--------+--------------------|
+| char  | short  | movsbw (%rdi), %ax |
+|       |        | movw %ax, (%rsi)   |
+
+Comment: we want to upgrade a char (one byte) (~b~) to a short (two
+bytes) (~w~). Since it's a signed value we use sign extension (~s~).
+*** 3.6
+Suppose register %rax holds value x and %rcx holds value y. Fill in
+the table below with formulas indicating the value that will be stored
+in %rdx for each of the given assembly-code instructions:
+
+| Instruction               | Result     |
+|---------------------------+------------|
+| leaq 6(%rax), %rdx        | 6 + x      |
+|---------------------------+------------|
+| leaq (%rax,%rcx), %rdx    | x + y      |
+|---------------------------+------------|
+| leaq (%rax,%rcx,4), %rdx  | x + 4y     |
+|---------------------------+------------|
+| leaq 7(%rax,%rax,8), %rdx | 7 + 9x     |
+|---------------------------+------------|
+| leaq 0xA(,%rcx,4), %rdx   | 10 + 4y    |
+|---------------------------+------------|
+| leaq 9(%rax,%rcx,2), %rdx | 9 + x + 2y |
+*** 3.16
+*Problem*:
+
+#+begin_quote
+When given the C code
+
+#+begin_src C
+  void cond (long a, long *p) {
+    if (p && a > *p) {
+      *p = a;
+    }
+  }
+#+end_src
+
+GCC generates the following assembly code:
+
+#+begin_src asm
+cond:
+        testq   %rsi, %rsi
+        je      .L1
+        cmpq    %rdi, (%rsi)
+        jge     .L1
+        movq    %rdi, (%rsi)
+.L1:
+        ret
+#+end_src
+
+A. Write a goto version in C that performs the same computation and
+mimics the control flow of the assembly code, in the style shown in
+Figure 3.16(b).  You might find it helpful to first annotate the
+assembly code as we have done in our examples.
+
+B. Explain why the assembly code contains two conditional branches,
+even though the C code has only one if statement.
+
+#+end_quote
+
+*Answer*:
+
+#+begin_src C
+
+  void cond(long a, long *p) {
+
+    if (p == 0) {
+      goto done;
+    }
+
+    if (*p >= a) {
+      goto done;
+    }
+
+    *p = a;
+
+    done:
+      return;
+  }
+
+#+end_src
+*** 3.17
+*Problem*:
+
+#+begin_quote
+An alternate rule for translating ~if~ statements into goto code is as
+follows:
+
+#+begin_src C
+  t = test-expr;
+  if (t)
+    goto true/;
+  else-statement;
+  goto done;
+  true:
+      then-statement
+  done:
+#+end_src
+#+end_quote
+
+A. Rewrite the goto version of ~absdiff_se~ based on this alternate rule.
+
+B. Can you think of any reasons for choosing one rule over the other?
+
+*Answer*:
+
+#+begin_src C
+  long gotodiff_se_alt(long x, long y) {
+    long result;
+    if (x < y)
+      goto true;
+    ge_cnt++;
+    result = x - y;
+    return result;
+    true:
+      lt_cnt++;
+      result = y - x;
+      return result;
+  }
+#+end_src
+* Linking
+What is linking?
+
+It consists in collecting/combining code and data into a single file.
+
+The single file can be /loaded/ in memory and executed.
+
+Linking can happen at different times:
+- compile time (static linking);
+- load time (dynamic linking);
+- run time (dynamic linking);
+
+Why are linkers important? Because they enable /separate compilation/.
+
+Most compilation systems provide a /compiler driver/ which takes care
+of preprocessing, compiling, assembling, and linking. GCC is one of
+such drivers.
+
+#+begin_src bash
+  $ gcc -Og prog main.c sum.c
+#+end_src
+
+You can run ~gcc~ using the ~-v~ options to see the steps ~gcc~ takes.
+** Static linking
+
+- A static linker takes a collection of relocatable object files and
+  command line arguments.
+
+- The output of the a static linker is a ``fully linked executable
+  object file that can be loaded an run''.
+
+- *What does a relocatable file consist of?* It consists of ``code and
+  data sections, where each section is a contiguous sequence of
+  bytes.''  There is a section, for example, for instructions, and
+  another section for initialized global variables, and another
+  section for uninitialized variables.
+
+- *What main tasks does a linker perform?*
+  - Symbol resolution: association of each symbol /reference/ with
+    exactly one symbole /definition/.
+  - Relocation: ``compilers and assemblers generate code and data
+    sections that start at address 0. The linker relocates...''. That
+    is it assign a memory location to each symbol definition and
+    changes all the refereces to the symbol so that they point to that
+    memory location. In order to relocate, the linker uses
+    instructions (called /relocation entries/) that have been
+    generated by the assembler.
+
+- Remember that object files are merely collections of blocks of bytes
+  and that the compiler and the assembler have done most of the
+  work...
+** Object files
+- There are three types of object files:
+  - Relocatable object file :: ...
+
+  - Executable object file :: ...
+
+  - Shared object file :: a special type of relocatable object file that
+    can be loaded into memory and linked /dynamically/ (either at load
+    time or at run time).
+
+- Object files are organized according to specific object file
+  formats.
+  - Windows: Portable Executable (PE);
+  - Mac OS-X: Mach-O;
+  - x86-64 Linux: Executable and Linkable Format (ELF).
+** Relocatable Object Files
+
+#+begin_src
+                       +-- +------------------------------+
+                       |   |      ELF header              |
+                       |   +------------------------------+
+                       |   |      .text                   |
+                       |   +------------------------------+
+                       |   |      .rodata                 |
+                       |   +------------------------------+
+                       |   |      .data                   |
+                       |   +------------------------------+
+                       |   |      .bss                    |
+                       |   +------------------------------+
+             Sections <|   |      .symtab                 |
+                       |   +------------------------------+
+                       |   |      .rel.text               |
+                       |   +------------------------------+
+                       |   |      .rel.data               |
+                       |   +------------------------------+
+                       |   |      .debug                  |
+                       |   +------------------------------+
+                       |   |      .line                   |
+                       |   +------------------------------+
+                       |   |      .strtab                 |
+          Describes    +-- +------------------------------+
+          object file <|   |      Section header table    |
+          sections     +-- +------------------------------+
+#+end_src
+
+- ELF header: ...
+- Section header table: ...
+- sections: ...
+
+** Symbols and Symbol Tables
+- Each relocatable module, /m/[fn::Modules? Authors say:
+  ``Technically, an /object module/ is a sequence of bytes, and an
+  /object file/ is an object module stored on a disk in a
+  file. However, we will use these terms interchangeably''.], has a
+  symbol table.
+
+- The symbole table contains information about the symbols that are
+  defined and referenced by /m/.
+
+- There are three kinds of symbols (in the context of a linker):
+  - Global linker symbols :: they are defined by /m/ and can be
+    referenced by other modules. They correspond to nonstatic C
+    functions and global variables.
+  - Externals :: they are referenced by /m/ but defined in some other
+    module. They correspond to nonstatic C functions and global
+    variables defined in other modules.
+  - Local linker symbols :: they are defined and referenced exclusively by
+    /m/. They correspond to static C function and global variable that
+    are defined with the ~static~ attribute. They are visible anywhere
+    within /m/, but cannot be referenced by other modules.
+
+
+- Local linker symbols are not the same as local program
+  variables. Local nonstatic program variables do not appear in the
+  symbol table in ~.symtab~. Local nonstatic program variables are
+  managed at run time on the stack. They are business of the linker.
+
+- Local procedures variables that are defined with ~static~ are not
+  managed on the stack. The compiler allocates spaec in ~.data~ or
+  ~.bss~ for each definition and dreates a local linker symbol in the
+  table with a unique name.
+
+  For example:
+  #+begin_src C
+    int f()
+    {
+      static int x = 0;
+      return x;
+    }
+
+    int g()
+    {
+      static int x = 1;
+      return x;
+    }
+  #+end_src
+
+** Symbol Resolution
+- strong vs weak symbols
+* Virtual memory
+** Practice problems
+*** 9.1
+#+begin_src
+| Number of virtual | Number of virtual | Largest possible |
+|  address bits (n) | addresses (N)     | virtual address  |
+|-------------------+-------------------+------------------|
+|                 4 | 2^4 = 16          | 2^(4)-1 = 15     |
+|-------------------+-------------------+------------------|
+|                14 | 2^14 = 16K        | 2^(14)-1 = 16K-1 |
+|-------------------+-------------------+------------------|
+|                24 | 2^24 = 16M        | 2^(24) = 16M-1   |
+|-------------------+-------------------+------------------|
+|                46 | 2^46 = 64T        | 2^(46)-1 = 64T-1 |
+|-------------------+-------------------+------------------|
+|                54 | 2^54 = 16P        | 2^(54)-1 = 16P-1 |
+#+end_src
+* System-Level I/O
+** Opening and closing files
+- ~open~
+** Reading and Writing files
+- ~read~
+- ~write~
+- Authors also show several reading and writing function that they
+  consider ``robust''. Some perform ``buffered'' operations.
+** Reading File Metadata
+- ~stat~
+- ~fstat~
+* Network Programming
+** Practice Problem 11.1
+Complete the following table:
+
+| Hex address | Dotted-decimal address |
+|-------------+------------------------|
+|         0x0 |                0.0.0.0 |
+|-------------+------------------------|
+|  0xffffffff |        255.255.255.255 |
+|-------------+------------------------|
+|  0x7f000001 |              127.0.0.1 |
+|-------------+------------------------|
+|  0xcdbca079 |        205.188.160.121 |
+|-------------+------------------------|
+|  0x400c950d |           64.12.149.13 |
+|-------------+------------------------|
+|  0xcdbc9217 |         205.188.146.23 |
+
+** Practice Problem 11.2
+#+begin_quote
+Write a program ~hex2dd.c~ that converts its hex argument to a
+dotted-decimal string and prints the result. For example:
+
+#+begin_src bash
+  linux> ./hex2dd 0x8002c2f2
+  128.2.194.242
+#+end_src
+#+end_quote
+
+#+begin_src C
+  /*
+    Covert hex argument to a dotted-decimal string and print it.
+
+    (Practice problem 11.2)
+  */
+
+  #include <stdint.h>
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <arpa/inet.h>
+
+  #define MAXBUF 100
+
+  int main(int argc, char* argv[]) {
+
+      struct in_addr inaddr; /* Address in network byte order (big endian)*/
+      uint32_t addr;         /* Address in host byter order */
+      char buf[MAXBUF];      /* Buffer for dotted-decimal string */
+
+      if (argc != 2) {
+          fprintf(stderr, "usage: %s <hex number>\n", argv[0]);
+          exit(0);
+      }
+      sscanf(argv[1], "%x", &addr); // scan input
+
+      inaddr.s_addr = htonl(addr); // convert input into network order
+                                   // and store it in to in_addr structure
+
+      if (!inet_ntop(AF_INET, &inaddr, buf, MAXBUF)) { // convert to dotted-decimal
+          printf("error: inet_ntop\n");
+          exit(1);
+      }
+      printf("%s\n", buf);
+
+      return 0;
+  }
+#+end_src
+
+** Practice Problem 11.3
+#+begin_quote
+Write a program ~dd2hex.c~  that converts its dotted-decimal argument
+to a hex number and prints the result. For example,
+
+#+begin_src bash
+  linux> ./dd2hex 128.2.194.242
+  0x8002c2f2
+#+end_src
+#+end_quote
+
+#+begin_src C
+  /*
+    Convert dotted-decimal argument to a hex number and print it.
+
+    (Practice problem 11.3)
+  */
+
+  #include <arpa/inet.h>
+  #include <netinet/in.h>
+  #include <stdint.h>
+  #include <stdio.h>
+  #include <stdlib.h>
+
+  #define MAXBUF 100
+
+  int main(int argc, char *argv[]) {
+      if (argc != 2) {
+          fprintf(stderr, "usage: %s <dotted-decimal value>\n", argv[0]);
+          exit(0);
+      }
+
+      struct in_addr inaddr; /* Address in network bite order (big endian) */
+
+      if (!inet_pton(AF_INET, argv[1], &inaddr)) {
+          printf("error: inet_pton\n");
+          exit(1);
+
+      }
+
+      uint32_t addr = ntohl(inaddr.s_addr); // address in host order
+
+      printf("0x%x\n", addr);
+
+      return 0;
+  }
+#+end_src
+
+** 11.4.8 Helper Functions for the Socket Interface
+The function ~open_clientfd~ can be called by a client to establish a
+connection with a server.
+
+#+begin_src C
+  int open_clientfd(char *hostname, char *port) {
+      int clientfd;
+      struct addrinfo hints, *listp, *p;
+
+      /* Get a list of potential server addresses */
+      memset(&hints, 0, sizeof(struct addrinfo));
+      hints.ai_socktype = SOCK_STREAM; /* Open a connection */
+      hints.ai_flags = AI_NUMERICSERV; /* ... using a numeric port arg. */
+      hints.ai_flags |= AI_ADDRCONFIG; /* Recommended for connections */
+      Getaddrinfo(hostname, port, &hints, &listp);
+
+      /* Walk the list for one that we can successfully connect to */
+      for (p = listp; p; p = p->ai_next) {
+          /* Create a socket descriptor */
+          if ((clientfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0)
+              continue; /* Socket failed, trye the next */
+
+          /* Connect to the server */
+          if (connect(clientfd, p->ai_addr, p->ai_addrlen) != -1)
+              break; /* Success */
+          Close(clientfd); /* Connect failed, try another */
+      }
+
+      /* Clean up */
+      Freeaddrinfo(listp);
+      if (!p) /* All connects failes */
+          return -1;
+      else /* the last connect succeded */
+          return clientfd;
+  }
+#+end_src
+
+The function ~open_listenfd~ can be called by a server to create a
+listening descriptor that is ready to receive connection requests.
+
+#+begin_src C
+  int open_listenfd(char *port) {
+      struct addrinfo hints, *listp, *p;
+      int listenfd, optval=1;
+
+      /* Get a list of potential server addresses */
+      memset(&hints, 0, sizeof(struct addrinfo));
+      hints.ai_socktype = SOCK_STREAM; /* Accepts connections */
+      hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG; /* ... on any IP address */
+      hints.ai_flags |= AI_NUMERICSERV;
+      Getaddrinfo(NULL, port, &hints, &listp);
+
+      /* Walk the list for one that we can bind to */
+      for (p = listp; p; p = p->ai_next) {
+          /* Create socket descriptor */
+          if ((listenfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0)
+              continue; /* Socket failed, try the next */
+
+          /* Eliminates "Address already in use" error from bing */
+          Setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR,
+                     (const void *)&optval, sizeof(int));
+
+          /* Bind the descriptor to the address */
+          if (bind(listenfd, p->ai_addr, p->ai_addrlen) == 0)
+              break;
+          Close(listenfd); /* Bind failed, try the next */
+      }
+
+      /* Clean up */
+      Freeaddrinfo(listp);
+      if (!p) /* No address worked */
+          return -1;
+
+      /* Make it a listening socket read to accept connection requests */
+      if (listen(listenfd, LISTENQ) < 0) {
+          Close(listenfd);
+          return -1;
+      }
+      return listenfd;
+  }
+#+end_src
