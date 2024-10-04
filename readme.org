@@ -1,4 +1,39 @@
 * Representing and Manipulation information
+- Converting between binary and hexadecimal is straightforward, since
+  it can be performed one hexadecimal digit at a time.
+
+- Coverting between decimal and hexadecimal representations requires
+  using multiplication or division to handle the general case.
+
+- Every computer has a /word size/, indicating the nominal size of
+  pointer data.
+  - Since a virtual address is encoded by such a word, the most
+    important system parameter determined by the word size is the
+    maximum size of the virtual address space. (A machine with a w-bit
+    word size will have a virtual addresses ranging from 0 to
+    (2^w)-1.)
+
+- There are ``typical'' sizes of C data types, but there might be
+  differet in different machines. To avoid problems, ISO C99
+  introduces ~int32_t~ and ~int64_t~.
+
+  [[./figures/typical_c_sizes.png]]
+
+- Two conventions for ordering bytes representing an object: /little
+  endian/, /big endian/.
+  - Usually one is not concerned with this. But, one is, for example
+    in the context of:
+    - networking;
+    - inspecting machine-level programs;
+    - circumventing the normal type system, by using a /cast/ or a
+      /union/.
+
+- A string in C is encoded by an array of characters terminated by the
+  null (having value 0) character.
+
+- ``A fundamental concept of computer systems is that a program, from
+  the perspective of the machine, is simply a sequence of bytes''.
+
 ** Practice problems
 *** 2.1
 - A. Ox39A7F8
@@ -79,7 +114,7 @@ D. 0x50ea - 0x503c = 0xAE
 Consider the following three calls to ~show_bytes~:
 
 #+begin_src C
-  int val = Ox87654321;
+  int val = 0x87654321;
   byte_pointer valp = (byte_pointer) &val;
   show_bytes(valp , 1);
   show_bytes(valp , 2);
@@ -96,7 +131,6 @@ little-endian machine and on a big-endian machine:
 | B |           2143 |       8765 |
 |---+----------------+------------|
 | C |         214365 |     876543 |
-
 
 *** 2.7
 #+begin_quote
