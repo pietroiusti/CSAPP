@@ -194,7 +194,8 @@ int allOddBits(int x) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+    /* to negate a number we can just do the complement and add 1 */
+    return ~x + 1;
 }
 //3
 /* 
