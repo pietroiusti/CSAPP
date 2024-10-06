@@ -183,8 +183,20 @@ int isTmax(int x) {
  *   Max ops: 12
  *   Rating: 2
  */
-int allOddBits(int x) {
-  return 2;
+int allOddBits(int x) { // solution from: https://github.com/myisabella/datalab/blob/master/bits.c#L152
+    // build mask 0xAAAAAAAA:
+    int mask = (0xAA << 8) + 0xAA;
+    mask = (mask << 16) + mask;
+    // use mask to zero out those bits we do not care about (the bits
+    // in even positions)
+    x = x & mask;
+    // we can check whether x's even bits are all 1s by using xor with
+    // the mask. If they are all ones, the result should be 0,
+    // otherwise the result should non-0.
+    x = x ^ mask;
+    // if the result is 0, then bang should give 1, otherwise it
+    // should give 0.
+    return !x;
 }
 /* 
  * negate - return -x 
