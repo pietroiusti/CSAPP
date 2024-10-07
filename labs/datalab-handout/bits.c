@@ -220,7 +220,27 @@ int negate(int x) {
  *   Rating: 3
  */
 int isAsciiDigit(int x) {
-  return 2;
+    /*
+      We can exploit the fact that that the sign bit changes if we
+      add/subtract enough. Going from a negative number a non-negative
+      number entails that the most significant bit goes from 1 to
+      0. Going from a non-negative number to a negative number entails
+      that the most signficant bit goes from 0 to 1.
+
+      So, for example, if you want to check whether x is greater or
+      equal than y, you can check whether -y + x yields a bit vector
+      whose most significant bit is 0.
+
+      And if you want to check whether x is less than or equal to y,
+      you can check whether y - x yields a a bit vector whose most
+      significant bit is 0.
+     */
+
+    int mask = 0x1<<31;
+
+    return !( (((~0x30)+1) + x) & mask) // x is greater than or equal to 0x30
+           &
+           !( (0x39 + ((~x)+1)) & mask ); //x is less than or equal to 0x39
 }
 /* 
  * conditional - same as x ? y : z 
