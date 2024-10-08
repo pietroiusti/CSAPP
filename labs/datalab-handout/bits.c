@@ -250,7 +250,29 @@ int isAsciiDigit(int x) {
  *   Rating: 3
  */
 int conditional(int x, int y, int z) {
-  return 2;
+  /*
+    Chatgpt got it right at the first try. Here is their explanation:
+
+    Compute x_nonzero: Using !!x, we convert any non-zero x to 1 and
+    zero to 0.
+
+    Create mask: We compute mask = ~x_nonzero + 1, which results in
+    0xFFFFFFFF (all ones) when x_nonzero is 1, and 0x00000000 (all
+    zeros) when x_nonzero is 0.
+
+    Select y or z: Finally, we use bitwise operations to select y or
+    z:
+
+    When mask is all ones, (mask & y) yields y and (~mask & z) yields
+    0.
+
+    When mask is zero, (mask & y) yields 0 and (~mask & z) yields z.
+
+    Combining these with bitwise OR gives you the desired result.
+     */
+    int x_nonzero = !!x;                // x_nonzero is 1 if x != 0, else 0
+    int mask = ~x_nonzero + 1;          // mask is all ones if x != 0, else 0
+    return (mask & y) | (~mask & z);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
