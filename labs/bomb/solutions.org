@@ -1,0 +1,68 @@
+* Preliminaries
+- create file with strings with ~strings bomb > strings~
+- create assembly with ~objdump -d > bomb.asm~
+- create table of symbols with ~objdump -t > symtab~
+- start gdb with ~gdb bomb~
+
+* phase_1: 
+The procedure ~strings_not_equal~ is called. Inspecting it one can see
+that the initial instruction copies the user input in ~%rbx~ and the
+string it is compared to in ~%rbx~. This latter is the string we want.
+
+#+begin_quote
+Border relations with Canada have never been better.
+
+Phase 1 defused. How about the next one?
+#+end_quote
+
+* phase_2
+Testing:
+
+Let's try with input ~1 2 3 4 5 6~.
+
+~read_six_numbers~ calls ~sscanf~ with this arguments:
+- %rdi: pointer to "1 2 3 4 5 6" (str)
+- %rsi: pointer to "%d %d %d %d %d %d" (format)
+- Addresses at which storing results:
+  - %rdx: 0x7fffffffe070 
+  - %rcx: 0x7fffffffe074
+  - %r8:  0x7fffffffe078
+  - %r9:  0x7fffffffe07c
+  - The other two arguments are put in the stack: where exactly?
+
+When ~read_six_numbers~ terminates control is passed back to
+~phase_2~.
+
+With
+#+begin_src asm
+cmpl $0x1,(%rsp)
+#+end_src
+We check whether (%rsp) is 1. ~(%rsp)~ is indeed 1. Why?
+
+The instruction
+#+begin_src asm
+0x0000000000400f1c <+32>:    cmp    %eax,(%rbx)
+#+end_src
+will then compare two 2 and 0x02.
+
+The same instruction
+#+begin_src asm
+0x0000000000400f1c <+32>:    cmp    %eax,(%rbx)
+#+end_src
+will then compare 4 and 0x03.
+
+This makes me think that the 0x03 is the third number of the input I
+gave. And so that the third number in my input should be 4, and not 3.
+
+If so, then the first three numbers should be 1 2 4...
+
+If so, I'm guessing that the rest will be 8 16 and 32. If I was a
+student of the course, I would be more careful, but since I am a
+self-study student I can make the bomb explode with impunity... My
+guess is right.
+
+#+begin_quote
+1 2 3 4 8 16 32
+
+That's number 2.  Keep going!
+#+end_quote
