@@ -179,6 +179,27 @@ H: 0xC0 = 0000000011000000 = 192.
 I: 0x48 = 0000000001001000 = 72.
 
 *** 2.19
+* Bomb Lab Recitation
+- defusing your bomb
+  - ~objdump -t bomb~ examines the symbole table
+  - ~objdump -d bomb~ disassembles all bomb code
+  - ~strings bombs~ prints all printables strings
+  - ~gdb bomb~ will open the GNU Debugger
+    - ~help~
+    - ~break~
+    - ~disassemble~
+    - ~info registers~
+    - ~print~ (~/x~ or ~/d~) ~$rsp~
+    - ~stepi~
+    - ~step~
+    - ~nexti~
+    - ~x~ (examine)
+      - ~x/8a 0x15213~
+      - ~x/4wd 0xdeadbeef~
+    - ~help stack~
+    - ~backtrace~
+
+
 * Machine-Level Representation of Programs
 #+begin_src C
   long mult2(long , long);
@@ -270,6 +291,65 @@ We can generate an executable named ~prog~ with: ~gcc -Og -o prog
 main.c mstore.c~.
 
 Let's also disassemble the file prog: ~objdump -d prog~...
+
+** Procedures
+- Mechanisms in procedures
+  - (1) PASSING CONTROL
+    - to beginning of procedure code
+    - back to return point
+  - (2) PASSING DATA
+    - procedure arguments
+    - return value
+  - (3) MEMORY MANAGEMENT
+    - Allocate during procedure execution
+    - Deallocate upon return
+
+We have to introduce the /stack/. The stack is a region of memory. It
+grows toward lower addresses.
+
+~%rsp~ contains the lowest stack address (the address of the element
+at the ``top'' of the stack).
+
+~%rip~ contains the next instruction to be executed.
+
+~push~ and ~pop~ make use of the stack.
+
+- (1) PASSING CONTROL
+  - How does a ~call~ to a function works? How do we pass control to it?
+    - i) We push onto the stack the address of where we have to return
+      (the instruction following the call) when the function
+      finishes. This means that we update the value of the %rsp, because
+      the stack has grown.
+    - ii) We set ~%rip~ to the beginning of the function which is being
+      called
+  - How does the returning a function work?
+    - iii) when the function hits the ~ret~ instruction, ~%rip~ is set
+      to the value we have previously stored in the stack, and the stack
+      is freed of the stuff we have stored with respect to the function
+      that just returned.
+
+- (2) PASSING DATA
+  - the first 6 arguments are passed in:
+    | %rdi |
+    |------|
+    | %rsi |
+    |------|
+    | %rdx |
+    |------|
+    | %rcx |
+    |------|
+    | %r8  |
+    |------|
+    | %r9  |
+  - The return value is in ~%rax~ (only for integers and pointers).
+  - The other arguments (if any) are put on the stack.
+
+
+# Let's assume (not very realistically) that we are in a context in
+# which the value of ~%rsp~ is ~0x120~ and the value of ~%rip~ is
+# ~0x400544~.
+
+
 ** Practice problems
 *** 3.4
 Assume variables ~sp~ and ~dp~ are declared with types
