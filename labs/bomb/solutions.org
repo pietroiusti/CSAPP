@@ -4,7 +4,7 @@
 - create table of symbols with ~objdump -t > symtab~
 - start gdb with ~gdb bomb~
 
-* phase_1: 
+* phase_1:
 The procedure ~strings_not_equal~ is called. Inspecting it one can see
 that the initial instruction copies the user input in ~%rbx~ and the
 string it is compared to in ~%rbx~. This latter is the string we want.
@@ -24,7 +24,7 @@ Let's try with input ~1 2 3 4 5 6~.
 - %rdi: pointer to "1 2 3 4 5 6" (str)
 - %rsi: pointer to "%d %d %d %d %d %d" (format)
 - Addresses at which storing results:
-  - %rdx: 0x7fffffffe070 
+  - %rdx: 0x7fffffffe070
   - %rcx: 0x7fffffffe074
   - %r8:  0x7fffffffe078
   - %r9:  0x7fffffffe07c
@@ -56,13 +56,89 @@ gave. And so that the third number in my input should be 4, and not 3.
 
 If so, then the first three numbers should be 1 2 4...
 
-If so, I'm guessing that the rest will be 8 16 and 32. If I was a
-student of the course, I would be more careful, but since I am a
-self-study student I can make the bomb explode with impunity... My
-guess is right.
+If so, I'm guessing that the rest will be 8 16 and 32. The guess is
+right:
 
 #+begin_quote
-1 2 3 4 8 16 32
+1 2 4 8 16 32
 
 That's number 2.  Keep going!
 #+end_quote
+
+* phase_3
+I'm trying with "foobar!".
+
+This instruction calls sscanf:
+#+begin_src asm
+0x0000000000400f5b <+24>:    call   0x400bf0 <__isoc99_sscanf@plt>
+#+end_src
+
+The value of %rdi (the first argument):
+#+begin_src
+(gdb) x/s $rdi
+0x603820 <input_strings+160>:   "foobar!"
+#+end_src
+
+The value of %esi:
+#+begin_src
+(gdb) x/s $esi
+0x4025cf:       "%d %d"
+#+end_src
+
+The value of %rdx (the third argument):
+#+begin_src
+(gdb) print/x $rdx
+$1 = 0x7fffffffe088
+#+end_src
+
+The value of %rcx (the fourth argument):
+#+begin_src
+(gdb) print/x $rcx
+$2 = 0x7fffffffe08c
+#+end_src
+
+We need scanf to return a number greater than 1, given the
+instructions that come after the call. So let's change the input to
+something else. Let's try with: 128 256.
+
+After sscanf has returned we are comparing the 0x8 and the value
+stored at address %rsp+8:
+#+begin_src
+0x0000000000400f6a <+39>:    cmpl   $0x7,0x8(%rsp)
+#+end_src
+
+Apparently we need the value at at %rsp+8 to be less than 7, otherwise
+we explode the bomb. What's that value?
+
+#+begin_src
+(gdb) x/1wx $rsp + 8
+0x7fffffffe088: 0x00000080
+#+end_src
+
+Oh, 128! Looks like that value is the first number of our imput.
+
+Let's try with 5 and 256.
+
+We can move further and see that at some point we bump into
+#+begin_src
+0x0000000000400fbe <+123>:   cmp    0xc(%rsp),%eax
+#+end_src
+which is comparing 206 with the value stored at %rsp+0xc (which
+happens to be the second number of our input:
+#+begin_src
+(gdb) x/x $rsp+0xc
+0x7fffffffe08c: 0x00000100
+(gdb) x/d $rsp+0xc
+0x7fffffffe08c: 256
+#+end_src
+
+We want the two number compared to be the same, otherwise the bomb
+explodes.
+
+Let's change our input again: 5 206.
+
+Success!
+#+begin_src
+5 206
+Halfway there!
+#+end_src
