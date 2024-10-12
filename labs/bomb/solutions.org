@@ -142,3 +142,46 @@ Success!
 5 206
 Halfway there!
 #+end_src
+
+* phase_4
+sscanf is called again.
+
+rdi (first arg):
+#+begin_src
+(gdb) x/s $rdi
+0x603870 <input_strings+240>:   "bella ciao"
+#+end_src
+
+rsi (second arg):
+#+begin_src
+(gdb) x/s $rsi
+0x4025cf:       "%d %d"
+#+end_src
+
+#+begin_src
+(gdb) p/x $rdx
+$1 = 0x7fffffffe088
+(gdb) x/x $rdx
+0x7fffffffe088: 0x06
+#+end_src
+
+#+begin_src
+(gdb) p/x $rcx
+$4 = 0x7fffffffe08c
+(gdb) x/x $rcx
+0x7fffffffe08c: 0x00
+#+end_src
+
+We want to put two numbers in our input again.
+
+...
+
+Not sure what func4 does exactly, but we want it to return 0.
+
+After that, the code check the second number stored by sscanf. It
+looks like we want that number to be 0 too. Success:
+
+#+begin_src
+0 0
+So you got that one.  Try this one.
+#+end_src
