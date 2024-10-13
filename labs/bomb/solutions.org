@@ -178,10 +178,108 @@ We want to put two numbers in our input again.
 
 Not sure what func4 does exactly, but we want it to return 0.
 
-After that, the code check the second number stored by sscanf. It
+After that, the code checks the second number stored by sscanf. It
 looks like we want that number to be 0 too. Success:
 
 #+begin_src
 0 0
 So you got that one.  Try this one.
+#+end_src
+
+* phase_5
+First of all, the input must be a string with length 6, given:
+#+begin_src asm
+  0x000000000040107a <+24>:    call   0x40131b <string_length>
+  0x000000000040107f <+29>:    cmp    $0x6,%eax
+  0x0000000000401082 <+32>:    je     0x4010d2 <phase_5+112>
+  0x0000000000401084 <+34>:    call   0x40143a <explode_bomb>
+#+end_src
+
+After checking that the input is 6 char long, the code enters a
+loop that loops 6 times:
+#+begin_src
+   0x000000000040108b <+41>:    movzbl (%rbx,%rax,1),%ecx
+   0x000000000040108f <+45>:    mov    %cl,(%rsp)
+   0x0000000000401092 <+48>:    mov    (%rsp),%rdx
+   0x0000000000401096 <+52>:    and    $0xf,%edx
+   0x0000000000401099 <+55>:    movzbl 0x4024b0(%rdx),%edx
+   0x00000000004010a0 <+62>:    mov    %dl,0x10(%rsp,%rax,1)
+   0x00000000004010a4 <+66>:    add    $0x1,%rax
+   0x00000000004010a8 <+70>:    cmp    $0x6,%rax
+   0x00000000004010ac <+74>:    jne    0x40108b <phase_5+41>
+#+end_src
+Even without inspecting it, we can gather that, given that it loops 6
+times, the loop is probably doing something for each character of our
+input.
+
+After the loop, two strings are compared, one of those strings is
+always: "flyers". The other string changes based on the input, in a
+way which is far from obvious.
+
+By inspecting what the loop doesm, I've noticed that ~0x4024b0~ points
+to a region of memory which stores characters.
+#+begin_src
+(gdb) x/300c 0x4024b0
+0x4024b0 <array.3449>:  109 'm' 97 'a'  100 'd' 117 'u' 105 'i' 101 'e' 114 'r' 115 's'
+0x4024b8 <array.3449+8>:        110 'n' 102 'f' 111 'o' 116 't' 118 'v' 98 'b'  121 'y' 108 'l'
+0x4024c0:       83 'S'  111 'o' 32 ' '  121 'y' 111 'o' 117 'u' 32 ' '  116 't'
+0x4024c8:       104 'h' 105 'i' 110 'n' 107 'k' 32 ' '  121 'y' 111 'o' 117 'u'
+0x4024d0:       32 ' '  99 'c'  97 'a'  110 'n' 32 ' '  115 's' 116 't' 111 'o'
+0x4024d8:       112 'p' 32 ' '  116 't' 104 'h' 101 'e' 32 ' '  98 'b'  111 'o'
+0x4024e0:       109 'm' 98 'b'  32 ' '  119 'w' 105 'i' 116 't' 104 'h' 32 ' '
+0x4024e8:       99 'c'  116 't' 114 'r' 108 'l' 45 '-'  99 'c'  44 ','  32 ' '
+0x4024f0:       100 'd' 111 'o' 32 ' '  121 'y' 111 'o' 117 'u' 63 '?'  0 '\000'
+0x4024f8:       67 'C'  117 'u' 114 'r' 115 's' 101 'e' 115 's' 44 ','  32 ' '
+0x402500:       121 'y' 111 'o' 117 'u' 39 '\'' 118 'v' 101 'e' 32 ' '  102 'f'
+0x402508:       111 'o' 117 'u' 110 'n' 100 'd' 32 ' '  116 't' 104 'h' 101 'e'
+0x402510:       32 ' '  115 's' 101 'e' 99 'c'  114 'r' 101 'e' 116 't' 32 ' '
+0x402518:       112 'p' 104 'h' 97 'a'  115 's' 101 'e' 33 '!'  0 '\000'        0 '\000'
+0x402520:       66 'B'  117 'u' 116 't' 32 ' '  102 'f' 105 'i' 110 'n' 100 'd'
+0x402528:       105 'i' 110 'n' 103 'g' 32 ' '  105 'i' 116 't' 32 ' '  97 'a'
+0x402530:       110 'n' 100 'd' 32 ' '  115 's' 111 'o' 108 'l' 118 'v' 105 'i'
+0x402538:       110 'n' 103 'g' 32 ' '  105 'i' 116 't' 32 ' '  97 'a'  114 'r'
+0x402540:       101 'e' 32 ' '  113 'q' 117 'u' 105 'i' 116 't' 101 'e' 32 ' '
+0x402548:       100 'd' 105 'i' 102 'f' 102 'f' 101 'e' 114 'r' 101 'e' 110 'n'
+0x402550:       116 't' 46 '.'  46 '.'  46 '.'  0 '\000'        0 '\000'        0 '\000'        0 '\000'
+0x402558:       67 'C'  111 'o' 110 'n' 103 'g' 114 'r' 97 'a'  116 't' 117 'u'
+0x402560:       108 'l' 97 'a'  116 't' 105 'i' 111 'o' 110 'n' 115 's' 33 '!'
+0x402568:       32 ' '  89 'Y'  111 'o' 117 'u' 39 '\'' 118 'v' 101 'e' 32 ' '
+0x402570:       100 'd' 101 'e' 102 'f' 117 'u' 115 's' 101 'e' 100 'd' 32 ' '
+0x402578:       116 't' 104 'h' 101 'e' 32 ' '  98 'b'  111 'o' 109 'm' 98 'b'
+0x402580:       33 '!'  0 '\000'        87 'W'  101 'e' 108 'l' 108 'l' 46 '.'  46 '.'
+0x402588:       46 '.'  0 '\000'        79 'O'  75 'K'  46 '.'  32 ' '  58 ':'  45 '-'
+0x402590:       41 ')'  0 '\000'        73 'I'  110 'n' 118 'v' 97 'a'  108 'l' 105 'i'
+0x402598:       100 'd' 32 ' '  112 'p' 104 'h' 97 'a'  115 's' 101 'e' 37 '%'
+0x4025a0:       115 's' 10 '\n' 0 '\000'        10 '\n' 66 'B'  79 'O'  79 'O'  77 'M'
+0x4025a8:       33 '!'  33 '!'  33 '!'  0 '\000'        84 'T'  104 'h' 101 'e' 32 ' '
+0x4025b0:       98 'b'  111 'o' 109 'm' 98 'b'  32 ' '  104 'h' 97 'a'  115 's'
+0x4025b8:       32 ' '  98 'b'  108 'l' 111 'o' 119 'w' 110 'n' 32 ' '  117 'u'
+0x4025c0:       112 'p' 46 '.'  0 '\000'        37 '%'  100 'd' 32 ' '  37 '%'  100 'd'
+0x4025c8:       32 ' '  37 '%'  100 'd' 32 ' '  37 '%'  100 'd' 32 ' '  37 '%'
+0x4025d0:       100 'd' 32 ' '  37 '%'  100 'd' 0 '\000'        69 'E'  114 'r' 114 'r'
+0x4025d8:       111 'o' 114 'r' 58 ':'  32 ' '
+#+end_src
+
+Moreover, in each iteration, the loop is selecting the first nibble (4
+bits) of one character of our input (using the bitwise ~and~). And
+it's using that value as an offset to access the region of memory full
+of characters.
+
+Given the characters that are stored at ~0x4024b0~, we want to provide
+an input that will produce those offsets which will pick the
+characters to form the ~flyers~ string. The offsets are:
+- 9 (0x9) for the letter f;
+- 15 (0xf) for the letter l;
+- 14 (0xe) for the letter y;
+- 5 (0x5) for the letter e;
+- 6 (0x6) for the letter r;
+- 7 (0x7) for the letter s;
+
+We need to provide characters whose rightmost nibbles are those
+offsets. By looking at the ascii table, I've selected: ~9?>567~.
+
+We got it:
+#+begin_src
+9?>567
+Good work!  On to the next...
 #+end_src
