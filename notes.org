@@ -795,6 +795,261 @@ You can run ~gcc~ using the ~-v~ options to see the steps ~gcc~ takes.
 ** Reading File Metadata
 - ~stat~
 - ~fstat~
+* Shell Lab Recitation
+- Up to now, two mechanism for changing control flow:
+  - jumps and branches
+  - call and return
+
+- Both react to changes in /program state/.
+  - However, we also want to react to /system state/, in order to have
+    a useful system.
+    - data arriving from a disk or a network adapter
+    - instruction divides by zero
+    - user hits Ctrl-C
+    - system timer expires
+
+- Asynchronous Exceptions (aka Interrupts)
+  - Caused by events external to the processor (you can't look at the
+    assembly code and say "here there might be an asynchronous
+    exception", because they just happen when the hardware decides to
+    send them in.)
+
+- Synchronous Exceptions
+  - Caused by events that occur as a result of executing an
+    instruction.
+  - *Traps*
+    - Intentional;
+    - Ex: system calls (e.g., ~fork~, ~exec~), breakpoint traps (the
+      way gdb handles breakpoints), special instructions;
+    - Returns control to ``next'' instruction;
+  - *Faults*
+    - Unintentional;
+    - Ex: page faults (recoverable), protection faults (unrecoverable)
+      (you could see this in the form of a seg fault if you are trying
+      to dereference ~NULL~), floating point exceptions (if you divide
+      or mod by 0 that causes of floating point exception).
+    - Either re-executes faulting (``current'') instruction or aborts.
+  - *Aborts*
+    - Unintentional and unrecoverable
+    - examples: parity error (e.g., RAM gets corrupted), machine check
+    - Aborts current program
+
+- What is a *program*?
+  - A bunch of data and instructions stored in an executable binary
+    file;
+  - Written according to a specification that tells users what it is
+    supposed to do (ELF, in the case of Linux);
+  - Stateless since binary file is static;
+
+- A *process* is an instance of a running program
+  - A process provides each program with two key abstractions
+    - Logical control flow
+      - Each program seems to have exclusive use of the CPU
+    - Private virtual address space
+      - Each program seems to have exclusive use of the main memory
+      - Gives the running program a *state*.
+
+- How are these illusions maintained?
+  - Process executions interleaved (multitasking) or run on separate
+    cores
+  - Address spaces managed by virtual memory system
+    - just know that this exists for now; we'll talk about it soon.
+
+- Processes
+  - Four basice states
+    - Running
+      - Executing instructions on the CPU
+      - Number bounded by number of CPU cores
+    - Runnable
+      - Waiting to be running
+    - Blocked
+      - Waiting for an event, maybe input from STDIN
+      - Not runnable
+    - Zombie
+      - Terminated, not yet reaped
+
+- Four basic process control function families:
+  - ~fork()~
+  - ~exec()~
+    - and other variants such as ~execvel()~
+  - ~exit()~
+  - ~wait()~
+    - and variants like ~waitpid()~
+
+- ~int fork(void)~
+  - creates a new process (child process) that is idential to the
+    calling process (parent process)
+  - OS creates an exact ducplicat of parent's state:
+    - Virtual address space (memory), including heap and stack
+    - Registers, except for the return value (%eax/%rax)
+    - File descriptors but files are shared
+  - Result -> Equal but separate state
+  - Fork is interesting (and often confusing) because it is called
+    once but returns twice.
+  - returns 0 to the child process
+  - returns child's pid to the parent process
+  - usually used like:
+    #+begin_src C
+      pid_t pid = fork();
+
+      if (pid == 0) {
+          // pid is 0 so we can detect child
+          printf("hello from child\n");
+      }
+
+      else {
+          // pid = child's assigned pid
+          printf("hello from parent\n");
+      }
+    #+end_src
+
+- ~int exec()~
+  - replaces the current process's state and context
+    - but keeps PID, open files, and signal context
+  - Provides a way to load and run *another* program
+    - replaces the current running memory image with that of new
+      program
+    - Set up stack with arguments and environments variables
+    - Start execution and the entry point
+  - Never returns on successful execution
+  - The newly loaded program's perspective: as if the previous program
+    has not been run before
+  - More useful variant is ~int execve()~
+  - For details? man 3 exec
+
+- ~void exit(int status)~
+  - Normally return with a status 0 (other numbers indicate an error)
+  - Terminates the current process
+  - OS frees resources such as heap memory and open file descriptors
+    and so on
+  - Reduces to a zombie state
+    - Must wait to be reaped by the parent process (or the init
+      process if the parent died)
+    - Signal is sent to the parent process notifying of death
+    - Reaper can inspect the exist status
+
+- ~int wait(int *child_status)~
+  - suspends current process until one of its children terminates
+  - return value is the pid of the child process that terminated
+    - When wait returns a pid > 0, child process has been reaped
+    - All child resources freed
+  - if ~child_status != NULL~, then the object it points to will be
+    set to a status indicating why the child process terminated
+  - More useful variants is ~int waitpid()~
+  - For details: man 2 wait
+
+- A *signal* is a small message that notifies a process that an event
+  of some type has occurred in the system
+  - akin to exceptions and interrupts (asynchronous)
+  - set from the kernel (sometimes at the request of another process)
+    to a proces
+  - signal type is identified by small integer ID's (1-30)
+  - only information in a signal is its ID and the fact that it
+    arrived
+
+    | ID | Name    | Default Action   | Corresponding Event                      |
+    |----+---------+------------------+------------------------------------------|
+    |  2 | SIGINT  | Terminate        | Interrupt (e.g., ctl-c from keyboard)    |
+    |----+---------+------------------+------------------------------------------|
+    |  9 | SIGKILL | Terminate        | Kill program (cannot override or ignore) |
+    |----+---------+------------------+------------------------------------------|
+    | 11 | SIGSEGV | Terminate & Dump | Segmentation violation                   |
+    |----+---------+------------------+------------------------------------------|
+    | 14 | SIGALRM | Terminate        | Time signal                              |
+    |----+---------+------------------+------------------------------------------|
+    | 17 | SIGCHLD | Ignore           | Child stopped or terminated              |
+
+- Kernel *sends* (delivers) a signal to a /destination process/ by
+  updating some state in the context of the destination process.
+
+- Kernel sends a signal for one of the following reasons:
+  - Kernel as detected a system event such as Ctrl-C (SIGINT),
+    divide-by-zero (SIGFPE), or the termination of a child process
+    (SIGCHLD)
+  - Another program called the kill() function
+  - The user a kill utility
+
+- A destination process *receives* a signal when it ii forced by the
+  kernel to react in some way to the delivery of the signla
+
+- Receiving a signal is non-queuing
+  - There is only one bit in the context per signal
+  - Receving 1 or 300 SIGINTs looks the same to the process
+
+- Signals are recevied at the context switch
+
+- Three possible ways to react:
+  - ignore
+  - terminate the process (with optional core dump)
+  - catch the signal by executing a user-leve function called signal
+    handler
+    - akin to a hardware exception handler being called in response to
+      an asynchronous interrupt
+
+- Blocking signals
+  - Sometimes code needs to run through a section that can't be
+    interrupsed
+  - implemented with ~sigprocmask()~
+
+- Waiting for signals
+  - Sometimes, we want to pause execution until we get a specific
+    signal
+  - Implemented with ~sigsuspend()~
+
+- Can't modify behavior of SIGKILL and SIGSTOP
+
+- signal handlers
+  - can be installed to run when a signal is received
+  - The form is ~void handler(int signum) { }~
+  - Separate flow of control in the same process
+  - Resumes normal flow of control upon returning
+  - Can be called anytime when the appropriate signal is fired
+
+- ~int sigsuspend(const signset_t *mask)~
+  - Can't use ~wait()~ twice --- use sigsuspend!
+  - Temporarily replaces the signal mask of the calling process with
+    the mask given
+  - Suspends the process until delivery of a signal whose action is to
+    invoke a signal handler or terminate a process
+  - Returns if the signal is caught
+    - Signal mask restored to the previous state
+  - Use ~sigaddset()~, ~sigemptyset()~, et. to create the mask.
+
+- Every process belongs to exactly one process group
+- Process groups can be used to distribute signals easily
+- A forked process becomes a member of the parent's process group
+
+- ~add_job~...
+
+- ~remove_job~...
+
+** shell lab
+- read the code you are given
+- don't be afraid to write your own helper functions
+- read man pages:
+  - sigemptyset()
+  - sigaddset()
+  - sigprocmask()
+  - sigsuspend()
+  - waitpid()
+  - open()
+  - dup2()
+  - setpgid()
+  - kill()
+
+- don't use sleep() to solve synchronization issues
+
+- hazards
+  - Race conditions
+    - hard to debug so start early (and think carefully)
+  - Reaping zombies
+    - Race conditions
+    - Handling signals correctly
+  - waiting for foreground job
+    - Think carefull about what the right way to do this is
+
+- Run your shell...
+
 * Network Programming
 ** Practice Problem 11.1
 Complete the following table:
