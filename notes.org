@@ -617,6 +617,639 @@ B. Can you think of any reasons for choosing one rule over the other?
       return result;
   }
 #+end_src
+* Linking (lecture 14, 2015)
+(https://scs.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=0aef84fc-a53b-49c6-bb43-14cb2b175249)
+
+- We are going to see how our programs interact with software (as
+  opposed to how they interact with hardware, a topic which have
+  partly investigated already), in particular system software.
+
+- We are going to starting this investigation by studying a process
+  called linking, which is *how the system builds your program*.
+
+- Example C program:
+
+  #+begin_src C
+    // main.c
+
+    int sum (int *a, int n);
+
+    int array[2] = {1, 2};
+
+    int main()
+    {
+        int val = sum(array, 2);
+        return val;
+    }
+  #+end_src
+
+  #+begin_src C
+    // sum.c
+
+    int sum(int *a, int n)
+    {
+        int i, su = 0;
+
+        for (i = 0; i < n; i++) {
+    	s += a[i];
+        }
+        return s;
+    }
+  #+end_src
+
+- Programs are translated and linked using a compiler driver:
+  - ~linux> gcc -Og -o prog main.c sum.c~
+  - ~linux> ./prog~
+
+    main.c                       sum.c             Source files
+      |                            |
+      V                            V
+   ----------------             ----------------
+   | Translators  |             | Translators  |
+   | (cpp,cc1,as) |             | (cpp,cc1,as) |
+   ----------------             ----------------
+          |                             |
+          V                             V          Separately compiled
+        main.o                        sum.o        /relocatable/ object files
+          |                             |
+          V                             V
+        ----------------------------------
+        |            linker              |
+        ----------------------------------
+                        |
+                        V
+                       prog               Fully linked /executable/ object file
+                                          (contains code and data for all functions
+                                          defined in main.c and sum.c)
+
+- *Why Linkers?*
+  - *1. Modularity*
+    - Program can be written as a collection of smaller source files,
+      rather than one monolithic mass.
+    - Can build libraries of common functions (more on this later)
+      - e.g., Math library, standard C libary.
+
+  - *2. Efficiency*
+    - Time: Separate compilation
+      - Change one source file, compie, and then relink
+      - No need to recompile other source files.
+    - Space: Libraries
+      - Common functions can be aggregated into a single file...
+      - Yet executable files and running memory images contain only
+        code for the functions they actually use.
+
+- *What Do Linkers Do?* There are two main tasks that a linker
+  performs.
+  - *Step 1: Symbol resolution*
+    - Programs define and reference /symbols/ (global variables and
+      functions):
+      - ~void swap() {...} /* define symbol swap */~
+      - ~swap();           /* reference symbol swap */~
+      - ~int *xp = &x;     /* define symbol xp, reference x */~
+    - Symbol definitions are stored in object file (by assembler) in
+      /symbol/ table.
+      - Symbol table is an array of /structs/.
+      - Each entry includes name, size, and location of symbol.
+
+    - *During symbol resolution step, the linker associates each
+      symbol reference with exactly one symbol definition.*
+  - *Step 2: Relocation*
+    - Merges separate code and data sections into single sections
+    - Relocates symbol from their relative locations in the .o files
+      to their final absolute memory locations in the executable.
+    - Updates all references to these symboles to reflect their new
+      position.
+
+- Before looking at these two steps in more detail, let's define a few
+  things.
+
+- Three Kinds of Object Files (Modules)
+  - Relocatable object file (.o file)
+    - Contains code and data in a form that can be combined with other
+      relocatable object files to form executable object file.
+      - each .o file is produced from exactly one source (.c) file.
+  - Executable object file (a.out file)
+    - Contains code and data in a form that can be copied directly
+      into memory and then executed.
+  - Shared object file (.so file)
+    - Special type of relocatable object file that can be loaded inot
+      memory and linked dynamically, at either loda time or run-time.
+    - Called /Dynamic Link Libraries/ (DLLs) by Windows.
+
+- Object Modules come in a standard format called the ELF format.
+
+- One unified format for
+  - Relocatable object files (.o),
+  - Executable object files (a.out),
+  - Shared object files (.so)
+
+- Generic name: ELF binaries
+
+- While these ELF binaries are binaries, they are very
+  structured. They are broken up into sections.
+
+  - *Elf header*
+    - words size, byte ordering, file type (.o, exec, .so), machine
+      type, etc.
+  - *Segment header table*
+    - Page size, virtual address memory segments (sections), segment
+      sizes
+  - *.text section*
+    - Code
+  - *.rodata section*
+    - Read only data: jump tables, ...
+  - *.data section*
+    - Initialized global variables
+  - *.bss section*
+    - Uninitialized global variables
+    - ``Block Started by Symbol''
+    - ``Better Save space''
+    - Has section header but occupies no space
+  - *.symtab section*
+    - Symbol table
+    - Procedure and static variable names
+    - Section names and locations
+  - *.rel.text section*
+    - relocation info for .text section
+    - Addresses of instructions that will need to be modified in the
+      executable
+    - Instructions for modifying
+  - *.rel.data section*
+    - Relocations info for .data section
+    - Addresses of point data that will need to be modified in the
+      merged executable
+  - *.debug section*
+    - Info for symbolic debugging (gcc -g)
+  - *Section header table*
+    - Offset and sizes of each section
+
+      #+begin_src
+                           +-- +------------------------------+
+                           |   |      ELF header              |
+                           |   +------------------------------+
+                           |   |   Segment header table       |
+                           |   | (required for executables)   |
+                           |   +------------------------------+
+                           |   |      .text                   |
+                           |   +------------------------------+
+                           |   |      .rodata                 |
+                           |   +------------------------------+
+                           |   |      .data                   |
+                           |   +------------------------------+
+                           |   |      .bss                    |
+                           |   +------------------------------+
+                 Sections <|   |      .symtab                 |
+                           |   +------------------------------+
+                           |   |      .rel.text               |
+                           |   +------------------------------+
+                           |   |      .rel.data               |
+                           |   +------------------------------+
+                           |   |      .debug                  |
+                           |   +------------------------------+
+                           |   |      .line                   |
+                           |   +------------------------------+
+                           |   |      .strtab                 |
+              Describes    +-- +------------------------------+
+              object file <|   |      Section header table    |
+              sections     +-- +------------------------------+
+    #+end_src
+
+- To a linker there are three different kinds of *symbols*
+  - Global symbols
+    - Symbols defined by module /m/ that can be referenced by other
+      modules.
+    - E.g.: non-static C functions and non-static global variables.
+  - External symbols
+    - Global symbols that are referenced by module /m/ but defined by
+      some other module
+  - Local symbols
+    - Symbols that are defined and referenced exclusively by module
+      /m/.
+    - E.g.: C functions and global variables defined with the static
+      attribute.
+    - *Local linker symbols are not local program variables*
+
+- (The `static` C attribute is used when we want to make a function of
+  our module /private/. That the way we get abstraction and
+  information hiding in C, and expose only those functions and that
+  data that we want to expose.)
+
+- Let's look in detail at how symbol resolution works.
+
+  [[./img/slide14.jpg]]
+
+- Local non-static C variables vs. local static C variables
+  - local non-static C variables: stored on the stack
+  - local static C variables: stored in either .bss, or .data
+
+- Consider:
+  #+begin_src C
+    int f()
+    {
+        static int x = 0;
+        return x;
+    }
+
+    int g()
+    {
+        static int x = 1;
+        return x;
+    }
+  #+end_src
+  The compiler allocates space in .data for each definition of x.
+
+  It creates local symboles in the symbol table with unique names,
+  e.g., x.1 and x.2.
+
+  - During symbole resolution, the linker associates each symbol
+    reference to exactly one unique symbol definition. How does it do
+    that if there are multiple symbol definitions across all the
+    modules?
+    - Program symbols are either strong or weak
+      - Strong: procedures and initialized globals
+      - Weak: uninitialized globals
+      - Ex.:
+        #+begin_src C
+          // p1.c
+
+          int foo = 5; // strong
+
+          p1() { // strong
+          }
+        #+end_src
+        #+begin_src C
+          // p2.c
+
+          int foo; // weak
+
+          p1() { // strong
+          }
+        #+end_src
+    - Linker follow these rules:
+      - *Rule 1*: Multiple strong symboles are not allowed
+        - Each item can be defined only once
+        - Otherwise: liker error
+      - *Rule 2*: Given a strong symbol and multiple weak symboles,
+        choose the strong symbol
+        - Refernces to the weak symbol resolve to the strong symbol
+      - *Rule 3*:
+        - Can override this with gcc -fno-common
+
+- If you are not aware of this stuff you can run into serious,
+  perplexing and confounding, problems. Linker error are usually the
+  most difficult to debug because people don't usually know what is
+  going on inside the linkers.
+
+  [[./img/slide18.jpg]]
+
+
+- *Avoid global variables if you can*
+
+- Otherwise
+  - Use ~static~ if you can (because that will limit its scope to the
+    module it is declared in)
+  - Initialize if you define a global variable (so that you will
+    discover if you have multiple initialized global symbols with the
+    same name)
+  - Use ~extern~ if you reference an external global variable (it's
+    good practice to tell the compiler)
+
+- Once symbol resolution is done, the linker has associated each
+  symbol reference to a symbol definition.
+
+  After that, the linker has to take all those relocatable object
+  files and merge them to create one big executable.
+
+- Relocation in detail (Step 2):
+
+  main.o contains code and initialized data.
+
+  main.o
+  |--------------------|
+  | main()             |  .text
+  |--------------------|
+  | int array[2]={1,2} |  .data
+  |--------------------|
+
+  sum.o just has code.
+
+  sum.o:
+  |-------|
+  | sum() |  .text
+  |-------|
+
+  And there is also system code that runs before and after your
+  code. When your program runs is gonna actually executing startup
+  code from libc whose last action is calling main passing arc and
+  argv. When your program's main function returns, it returns to that
+  startup code (which then does an exit). That code consists of data
+  and code as well.
+
+  |-------------|
+  | System code |  .text
+  |-------------|
+  | System data |  .data
+  |-------------|
+
+  When the linker relocates these files, it takes all the code from
+  the .text sections of each of the module and puts it together
+  contiguously (in some order that it determines) in the .text section
+  of the executable object file.
+
+  And then it does the same with the .data sections.
+
+  The act of reloacting this object files requires the linker to
+  figure out where it is going to actually store these different
+  symbols when this program gets loaded.
+
+  It has to pick an address for main that function will start at. Some
+  absolute address. And the same for sum, and the data...
+
+  The problem is that when this code is compiled, the compiler does
+  not know which addresses the linker is gonna pick.
+
+  So the compiler creates some reminders to the linker called
+  *relocation entries*, which are stored in the relocation section of
+  the object files. The *relocation entries* tell the linker that
+  there is a reference to a symbol that's gonna have to be patched up
+  when the code is relocated and merged into the executable.
+
+- See ~objdump -r -d main.o~...
+
+  #+begin_src bash
+    [linux]$ gcc -c -Og main.c
+
+    [linux]$ objdump -d -r main.o # disassemble and print relocation entries of main.o
+
+    main.o:     file format elf64-x86-64
+
+
+    Disassembly of section .text:
+
+    0000000000000000 <main>:
+    0:	48 83 ec 08          	sub    $0x8,%rsp
+    4:	be 02 00 00 00       	mov    $0x2,%esi
+    9:	48 8d 3d 00 00 00 00 	lea    0x0(%rip),%rdi        # 10 <main+0x10>
+    c: R_X86_64_PC32	array-0x4
+    10:	e8 00 00 00 00       	call   15 <main+0x15>
+    11: R_X86_64_PLT32	sum-0x4
+    15:	48 83 c4 08          	add    $0x8,%rsp
+    19:	c3                   	ret
+  #+end_src
+
+- See ~objdump -dx prog~. When can see that the linker has patched the
+  right place with the addresses.
+  #+begin_src asm
+    # ....
+    0000000000001119 <main>:
+        1119:	48 83 ec 08          	sub    $0x8,%rsp
+        111d:	be 02 00 00 00       	mov    $0x2,%esi
+        1122:	48 8d 3d e7 2e 00 00 	lea    0x2ee7(%rip),%rdi        # 4010 <array>
+        1129:	e8 12 00 00 00       	call   1140 <sum>
+        112e:	48 83 c4 08          	add    $0x8,%rsp
+        1132:	c3                   	ret
+        1133:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+        113a:	00 00 00
+        113d:	0f 1f 00             	nopl   (%rax)
+
+    0000000000001140 <sum>:
+        1140:	ba 00 00 00 00       	mov    $0x0,%edx
+        1145:	b8 00 00 00 00       	mov    $0x0,%eax
+        114a:	eb 0d                	jmp    1159 <sum+0x19>
+        114c:	0f 1f 40 00          	nopl   0x0(%rax)
+        1150:	48 63 c8             	movslq %eax,%rcx
+        1153:	03 14 8f             	add    (%rdi,%rcx,4),%edx
+        1156:	83 c0 01             	add    $0x1,%eax
+        1159:	39 f0                	cmp    %esi,%eax
+        115b:	7c f3                	jl     1150 <sum+0x10>
+        115d:	89 d0                	mov    %edx,%eax
+        115f:	c3                   	ret
+     #...
+  #+end_src
+
+- The compiler does all the smart stuff (it computes the relocation
+  entries), the linker just does what it is told to do.
+
+- Once the linker has created an object file, the data and code of
+  that object file can be loaded into memory without futher
+  modifications.
+
+- This is the address space that every linux program sees:
+
+  #+begin_src 
+              |-------------------------|^  Memory
+              |                         ||  invisible to
+              | Kernel Virtual memory   ||  user code
+              |-------------------------|
+              | User stack              |
+              | (created at runtime)    |
+              |-------------------------|<--- %rsp
+              |           |             |     (stack
+              |           V             |      pointer)
+              |                         |
+              |-------------------------|
+              | Memory-mapped region    |
+              | for shared libraries    |
+              |-------------------------|
+              |                         |
+              |           ^             |
+              |           |             |
+              |-------------------------|<--- brk
+              | Run-time heap           |
+              | (created by malloc)     |
+              |-------------------------| ---
+              | Read/write data segment |   |   Loaded
+              | (.data, .bss)           |   |   from
+              |-------------------------|   |-> the
+              | Read-only code segment  |   |   executable
+              | (.init, .text, .rodata) |   |   file
+    0x400000  |-------------------------| ---
+              | Unused                  |
+           0  |-------------------------|
+  #+end_src
+
+  - We are drawing addresses starting from 0 and increasing as we go
+    up.
+
+  - Every program is loaded at the same address (0x400000).
+
+  - The code comes directly from the object file.
+
+  - The data comes directly from the object file.
+
+  - And it is followed by a run-time heap (which grows upwards), which
+    is created and managed by ~malloc~.
+
+  - The stack (which grows down) is at the very top of the visible
+    memory that's available to application programs. The stack is
+    created and managed at runtime.
+
+  - The memory above that is restricted to the kernel. If you try to
+    access those memory locations, you'll get a segfault.
+
+  - Somewhere in the huge gap between the stack and the heap, there is
+    a region for shared libraries. ~.so~ files all get loaded there.
+
+  - The top of the heap is indicated by the global variable ~brk~,
+    which is maintained by the kernel.
+
+  - The top of the stack is maintained by the general purpose register
+    ~%rsp~.
+
+  - (This is a little of a simplification. If you actually look at the
+    addresses returned by ~malloc~, there are actually two
+    heaps... (one for large object which grows down, and one for small
+    object --- the one depicted in our drawing --- which grows
+    upwards.)
+
+- So, one of the real advantages of linking is that it allows us to
+  create libraries of things. As programmers, we always want to create
+  abstractions and the present those abstractions to users. That is,
+  define apis, package up those apis, and make them availabe to other
+  programmers.
+
+- How can we actually do that?
+
+  - Option 1. Given what we have learnt so far you can just take all
+    the functions and put them all in a single big C file. Programmers
+    can then link their program tot hat c file if they want to use
+    those functions.
+    - space and time inefficient.
+
+  - Option 2. Another option would be putting each function in a
+    separate file, and then compile and link them all together.
+    - More efficient, but burdensome on the programmer
+    
+- OLD-FASHION SOLUTION: *Static Libraries*.
+  - This is the first idea the developers of unix came up with. The
+    idea is creating an archive called the ~.a file~, which is just a
+    collection of .o files, where each .o file contains a function.
+    Basically you create a bunch of .o files, and then you use a
+    program called ``archiver'' (ar) to put those .o files together
+    in a big file called ``archive'' with a toc at the beginning which
+    tells you the offset of each one of the .o files.  
+  - You pass that archive to the linker. The linker will link only
+    those .o file that are actually refenced. You can have a huge
+    archive, but if you only call printf, then the only .o file you
+    get is printf.o.
+
+- Creating Static Libraries:
+
+           atoi.c             printf.c             random.c       
+             |                   |                    |
+             V                   V                    V
+        --------------      --------------       --------------
+        | translator |      | translator |  ...  | translator |
+        --------------      --------------       --------------
+               |                  |                    |
+               |                  |                    |
+               \---------         |          ---------/
+                        |         |          |
+                        V         V          V
+                     ---------------------------    unix> ar rs libc.a \
+                     |      Archiver (ar)      |      atoi.o printf.o ... random.o
+                     ---------------------------
+                                  |
+                                  V      C Standard library
+                               libc.a
+
+- Archiver allows incremental updates
+
+- libc.a (the C standard library) is about 1496 object files (4.6 MB)
+
+- libm.a (the C math library) is about 444 object files (2 MB)
+
+- ~[linux]$ ar -t /usr/lib/libc.a | sort~:
+  #+begin_src bash
+    a64l.o
+    abort.o
+    abs.o
+    accept4.o
+    accept.o
+    access.o
+    acct.o
+    addmul_1.o
+    add_n.o
+    adjtime.o
+    ...
+  #+end_src
+
+- the convention has it that a library starts with `lib'.
+
+- Linking with static libaries:
+
+  [[./img/slide29.jpg]]
+
+
+- This liking is done at compile time.
+
+- When using static libraries, the linker scans all .o files and .a
+  files in the command line order.
+
+- During the scan, it keeps a list of the current unresolved
+  references.
+
+- As each new .o or .a file is encounterd, the linker tries to resolve
+  each unresolved references in the list against the symbols defined
+  in the .o or .a file.
+
+- If any entries in the unresolved list at end of scan, then error.
+
+- Problem
+  - Command line order matters!
+  - Moral: put libraries at the end of the command line.
+    #+begin_src bash
+      [unix]$ gcc -L. libtest.o -lmine
+      [unix]$ gcc -L. -lmine libtest.o 
+      libtest.o: In function `main':
+      libtest.o(.text+0x4): undefined reference to `libfun'
+    #+end_src
+
+- MODERN SOLUTION: *Shared Libraries*
+
+- The reason there are these new sorts of libaries is that static
+  libraries have some disadvantages.
+
+- Importantly, for example, any program that uses ~printf~ has to have
+  a copy of ~printf~ (and analogously for other functions)
+
+- With shared libraries, object files that contain code and data are
+  loaded and linked into an application /dynamically/, at either
+  /load-time/ or /run-time/.
+    
+- Also called: dynamically link libraries, DLLs, .so files
+
+- Dynamic linking can occur when executable is first loaded and run
+  (load-time linking)
+
+- Dynamic linking can also occur after the program has begun (run-time
+  linking)
+
+- Shared libraries routines can be shared by multiple processes. 
+
+- Dynamic linking at load time
+  - a shared library can be created using ~gcc~ 
+  - the linker won't actually copy in the executable the functions
+    contained in the library. It will simply make a note in the symbol
+    table that the references to those function will need to be
+    resolved when the program is loaded.
+  - You can't take an executable file that was dynamically linked and
+    load it directly: the loader (execve) takes the executable and the
+    .so files that the program needs and call the dynamic linker
+    (ld-linux.so) so that the executable in memory is fully linked.
+
+- Dynamic linking at run time
+  - You can use the ~dlopen~ interface which is present in libc
+  - This is a very powerful technique
+
+- Library interpositioning: powerful linking technique that allows
+  programmer to intercept calls to arbitrary functions
+
+- Interpositioning can occur at:
+  - Compile time
+  - Link time
+  - Load/run time
+
 * Linking
 What is linking?
 
