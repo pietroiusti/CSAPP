@@ -86,6 +86,65 @@ void app_error(char *msg);
 typedef void handler_t(int);
 handler_t *Signal(int signum, handler_t *handler);
 
+
+/* helper functions */
+
+// count words in a string
+unsigned wc(char *str) {
+    unsigned wc = 0;
+    char *s = str;
+    size_t i = 0;
+    while (s[i] != '\0') {
+        while (s[i] == ' ') // consume white spaces
+            i++;
+
+        if (s[i] != '\0') { // word found
+            wc++;
+            while (s[i] != ' ' && s[i] != '\0') { // consume word
+                i++;
+            }
+        }
+    }
+    return wc;
+}
+
+// rudimentarily split a string into strings treating space(s) as
+// delimiter(s). Mutate `str`.
+char **split_string(char *str) {
+    unsigned word_count = wc(str);
+
+    char **arr = malloc(word_count*sizeof(char*));
+
+    if (arr == NULL) {
+        printf("Error allocating arr -- SPLIT_STRING");
+        exit(1);
+    }
+
+    char *s = str;
+    size_t i = 0;
+    unsigned count = 0;
+    while (s[i] != '\0') {
+        while (s[i] == ' ') {// consume white spaces
+            s[i] = '\0';
+            i++;
+        }
+
+        if (s[i] != '\0') { // word found
+            arr[count] = &s[i];
+            count++;
+
+            while (s[i] != ' ' && s[i] != '\0') { // consume word
+                i++;
+            }
+        }
+    }
+
+    return arr;
+}
+
+
+
+
 /*
  * main - The shell's main routine 
  */
@@ -166,9 +225,14 @@ int main(int argc, char **argv)
 */
 void eval(char *cmdline)
 {
-    if (strcmp(cmdline, "quit\n") == 0) {
-        exit(0);
-    }
+
+    char **argv = split_string(cmdline);
+
+    int builtin = builtin_cmd(argv);
+
+    if (builtin) return;
+
+    // TODO
 
     return;
 }
@@ -236,6 +300,16 @@ int parseline(const char *cmdline, char **argv)
  */
 int builtin_cmd(char **argv) 
 {
+    char *name = argv[0]; // call it name following lab's pdf
+
+    if (strcmp(name, "quit\n") == 0) {
+        exit(0);
+        // no need to return a non-zero int since we are exiting in
+        // this case
+    }
+
+    // TODO: add more built-in commands handlers
+
     return 0;     /* not a builtin command */
 }
 
