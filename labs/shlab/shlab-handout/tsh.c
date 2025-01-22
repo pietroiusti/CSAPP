@@ -86,69 +86,6 @@ void app_error(char *msg);
 typedef void handler_t(int);
 handler_t *Signal(int signum, handler_t *handler);
 
-
-/* helper functions */
-
-// count words in a string
-unsigned wc(char *str) {
-    unsigned wc = 0;
-    char *s = str;
-    size_t i = 0;
-    while (s[i] != '\0') {
-        while (s[i] == ' ') // consume white spaces
-            i++;
-
-        if (s[i] != '\0') { // word found
-            wc++;
-            while (s[i] != ' ' && s[i] != '\0') { // consume word
-                i++;
-            }
-        }
-    }
-    return wc;
-}
-
-// rudimentarily split a string into strings treating space(s) as
-// delimiter(s). Mutate `str`.
-// e.g. "foo bar baz"
-//           |
-//           V
-// ["foo",  "bar",  "baz"]
-char **split_string(char *str) {
-    unsigned word_count = wc(str);
-
-    char **arr = malloc(word_count*sizeof(char*));
-
-    if (arr == NULL) {
-        printf("Error allocating arr -- SPLIT_STRING");
-        exit(1);
-    }
-
-    char *s = str;
-    size_t i = 0;
-    unsigned count = 0;
-    while (s[i] != '\0') {
-        while (s[i] == ' ') {// consume white spaces
-            s[i] = '\0';
-            i++;
-        }
-
-        if (s[i] != '\0') { // word found
-            arr[count] = &s[i];
-            count++;
-
-            while (s[i] != ' ' && s[i] != '\0') { // consume word
-                i++;
-            }
-        }
-    }
-
-    return arr;
-}
-
-
-
-
 /*
  * main - The shell's main routine
  */
@@ -229,14 +166,8 @@ int main(int argc, char **argv)
 */
 void eval(char *cmdline)
 {
-    // copy cmdline and remove new line character at the end of it
-    size_t length = strlen(cmdline);
-    char line[length + 1];
-    strcpy(line, cmdline);
-    line[length-1] = '\0';
-
-    // split the line into an array of strings
-    char **argv = split_string(line);
+    char *argv[100];
+    int bg = parseline(cmdline, argv);
 
     // handle built-in commands
     int builtin = builtin_cmd(argv);
@@ -246,6 +177,11 @@ void eval(char *cmdline)
     if (builtin) return;
 
     // TODO
+    if (bg) {
+        printf("run bg job\n");
+    } else {
+        printf("run fg job\n");
+    }
 
     return;
 }
@@ -315,17 +251,19 @@ int builtin_cmd(char **argv)
 {
     char *name = argv[0]; // call it name following lab's pdf
 
-    printf("%s\n", name);
-
     if (strcmp(name, "quit") == 0) {
         exit(0);
         // no need to return a non-zero int since we are exiting in
         // this case
+    } else if (strcmp(name, "bg") == 0) {
+        printf("TODO: bg\n");
+    } else if (strcmp(name, "fg") == 0) {
+        printf("TODO: fg\n");
+    } else if (strcmp(name, "jobs") == 0) {
+        printf("TODO: jobs\n");
     }
 
-    // TODO: add more built-in commands handlers
-
-    return 0;     /* not a builtin command */
+    return 0;
 }
 
 /*
