@@ -176,11 +176,33 @@ void eval(char *cmdline)
     // here. builtin_cmd has taken care of everything.
     if (builtin) return;
 
-    // TODO
-    if (bg) {
-        printf("run bg job\n");
-    } else {
-        printf("run fg job\n");
+    printf("Going to fork\n");
+    pid_t fork_ret = fork();
+
+    if (fork_ret == -1) {
+        printf("Error while forking...\n");
+        exit(2);
+    } else if (fork_ret == 0) { // child process
+        // IN PROGRESS
+        if (bg) {
+
+            printf("todo: run bg job\n");
+
+        } else {
+            printf("todo: run fg job\n");
+
+            pid_t child_pid = getpid();
+
+            // set pgig to the same value of pid (since ``each child
+            // process must have a unique process group ID''; see
+            // above)
+            setpgid(child_pid, child_pid);
+        }
+    } else { // parent process
+        /* pid_t parent_pid = getpid(); */
+        /* pid_t parent_pgid = getpgid(parent_pid); */
+        /* printf("Parent process pid: %d\n", parent_pid); */
+        /* printf("Parent process pgid: %d\n", parent_pgid); */
     }
 
     return;
