@@ -1,0 +1,8 @@
+- might be useful: https://www.cs.purdue.edu/homes/grr/SystemsProgrammingBook/Book/Chapter5-WritingYourOwnShell.pdf
+
+- to compile the program:
+  - ~make~
+
+- run shell driver using trace files
+  - ~make test01~, ~make rtest01~;
+  
