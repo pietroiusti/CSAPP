@@ -165,15 +165,36 @@ int main(int argc, char **argv)
 */
 void eval(char *cmdline)
 {
-
-    // check whether cmline is greater than MAXLINE?
+    // TODO?: check whether cmdline is greater than MAXLINE
 
     char *argv[MAXARGS];
+    int bg = parseline(cmdline, argv);
+    if (builtin_cmd(argv)) return;
+    if (argv[0] == NULL) return; // ignore empty lines
 
-    int ret = parseline(cmdline, argv);
+    pid_t pid = fork();
+    if (pid == -1) {
+        printf("Error while forking...\n");
+        exit(2);
+    }
 
-    if (!builtin_cmd(argv)) {
-        printf("TODO!\n");
+    if (pid == 0) { // child
+        pid_t child_pid = getpid();
+        setpgid(child_pid, child_pid);
+
+        int execve_ret = execve(argv[0], argv, environ);
+        if (execve_ret < 0) {
+            printf("%s: Command not found.\n", argv[0]);
+            exit(0);
+        }
+    }
+
+    /* parent waiting for foreground job to terminate */
+    if (!bg) {
+        waitfg(pid);
+    } else {
+        // let job run in the background
+        printf("%d %s", pid, cmdline);
     }
 
     return;
@@ -262,6 +283,10 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
+    int status;
+    if (waitpid(pid, &status, 0) < 0) {
+        unix_error("waitfg: waitpid error");
+    }
     return;
 }
 
