@@ -181,17 +181,18 @@ void eval(char *cmdline)
     if (pid == 0) { // child
         pid_t child_pid = getpid();
         setpgid(child_pid, child_pid);
-
+        addjob(jobs, child_pid, BG, cmdline); // ret val check?
         int execve_ret = execve(argv[0], argv, environ);
         if (execve_ret < 0) {
             printf("%s: Command not found.\n", argv[0]);
-            exit(0);
         }
+        exit(0);
     }
 
     /* parent waiting for foreground job to terminate */
     if (!bg) {
         waitfg(pid);
+        deletejob(jobs, pid);
     } else {
         // let job run in the background
         printf("%d %s", pid, cmdline);
