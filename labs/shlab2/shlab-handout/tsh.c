@@ -179,9 +179,7 @@ void eval(char *cmdline)
     }
 
     if (pid == 0) { // child
-        pid_t child_pid = getpid();
-        setpgid(child_pid, child_pid);
-        addjob(jobs, child_pid, BG, cmdline); // ret val check?
+        // execute job in the child context
         int execve_ret = execve(argv[0], argv, environ);
         if (execve_ret < 0) {
             printf("%s: Command not found.\n", argv[0]);
@@ -189,13 +187,17 @@ void eval(char *cmdline)
         exit(0);
     }
 
-    /* parent waiting for foreground job to terminate */
+    setpgid(pid, pid);
+
+    // should only bg jobs added to the job list?
+    int addjob_ret = addjob(jobs, pid, BG, cmdline);
+    if (addjob_ret == 0) printf("Something went wrong\n");
+
     if (!bg) {
         waitfg(pid);
         deletejob(jobs, pid);
     } else {
-        // let job run in the background
-        printf("%d %s", pid, cmdline);
+        printf("[%d] (%d) Running %s", maxjid(jobs), pid, cmdline);
     }
 
     return;
@@ -304,6 +306,23 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig)
 {
+    // printf("sigchld_handler: %d\n", sig);
+    for (int i = 0; i < MAXJOBS; i++) {
+        //printf("%d\n", jobs[i].pid);
+        pid_t pid = jobs[i].pid;
+        if (pid > 0) {
+            // REAPING THOSE BITCHES!!
+            pid_t ret = waitpid(pid, NULL, WNOHANG);
+            if (ret == 0) {
+                printf("%d has not terminated yet... leaving it in peace\n", pid);
+            } else {
+                printf("%d has been reaped!!!\n", pid);
+                deletejob(jobs, pid);
+                printf("deleting job from job list\n");
+            }
+        }
+    }
+
     return;
 }
 
