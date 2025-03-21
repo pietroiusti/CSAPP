@@ -188,14 +188,11 @@ void eval(char *cmdline)
     }
 
     setpgid(pid, pid);
-
-    // should only bg jobs added to the job list?
-    int addjob_ret = addjob(jobs, pid, BG, cmdline);
+    int addjob_ret = addjob(jobs, pid, bg?BG:FG, cmdline);
     if (addjob_ret == 0) printf("Something went wrong\n");
 
     if (!bg) {
         waitfg(pid);
-        deletejob(jobs, pid);
     } else {
         printf("[%d] (%d) Running %s", maxjid(jobs), pid, cmdline);
     }
@@ -286,10 +283,12 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
-    int status;
-    if (waitpid(pid, &status, 0) < 0) {
-        unix_error("waitfg: waitpid error");
+    // loop while pid is in the job list (sigchld handler removes it
+    // from the list then it terminates)
+    while (getjobpid(jobs, pid) != NULL) {
+        sleep(1);
     }
+
     return;
 }
 
