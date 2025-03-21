@@ -194,7 +194,7 @@ void eval(char *cmdline)
     if (!bg) {
         waitfg(pid);
     } else {
-        printf("[%d] (%d) Running %s", maxjid(jobs), pid, cmdline);
+        printf("[%d] (%d) %s", maxjid(jobs), pid, cmdline);
     }
 
     return;
