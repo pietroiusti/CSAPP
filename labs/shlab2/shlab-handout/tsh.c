@@ -313,11 +313,12 @@ void sigchld_handler(int sig)
             // REAPING THOSE BITCHES!!
             pid_t ret = waitpid(pid, NULL, WNOHANG);
             if (ret == 0) {
-                printf("%d has not terminated yet... leaving it in peace\n", pid);
+                ;
+                //printf("%d has not terminated yet... leaving it in peace\n", pid);
             } else {
-                printf("%d has been reaped!!!\n", pid);
+                /* printf("%d has been reaped!!!\n", pid); */
                 deletejob(jobs, pid);
-                printf("deleting job from job list\n");
+                /* printf("deleting job from job list\n"); */
             }
         }
     }
