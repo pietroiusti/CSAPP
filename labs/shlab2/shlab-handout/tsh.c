@@ -333,8 +333,16 @@ void sigchld_handler(int sig)
         //printf("%d\n", jobs[i].pid);
         pid_t pid = jobs[i].pid;
         if (pid > 0) {
-            // REAPING THOSE BITCHES!!
-            pid_t ret = waitpid(pid, NULL, WNOHANG);
+            /*From waitpid man:
+              WNOHANG
+                  return immediately if no child has exited.
+
+              WUNTRACED
+                  also  return  if  a  child  has  stopped  (but  not  traced   via
+                  ptrace(2)).   Status  for  traced  children which have stopped is
+                  provided even if this option is not specified.
+             */
+            pid_t ret = waitpid(pid, NULL, WNOHANG|WUNTRACED);
             if (ret == 0) {
                 ;
                 //printf("%d has not terminated yet... leaving it in peace\n", pid);
@@ -356,14 +364,15 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig)
 {
+    // printf("sigint_handler: %d\n", sig);
     int pid;
     if ((pid = fgpid(jobs)) != 0) {
         // the job's gpid is equal to the job's pid (see call to
         // setpgid above)
-        if (kill(-pid, 2)==-1) {// Send SIGINT to fg job's process group
+        if (kill(-pid, SIGINT)==-1) {// Send SIGINT to fg job's process group
             printf("kill: error\n");
         } else {
-            printf("Job [%d] (%d) terminated by signal 2\n", pid2jid(pid), pid);
+            printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, sig);
         }
     }
     return;
@@ -376,6 +385,17 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig)
 {
+    // printf("sigtstp_handler: %d\n", sig);
+    int pid;
+    if ((pid = fgpid(jobs)) != 0) {
+        // the job's gpid is equal to the job's pid (see call to
+        // setpgid above)
+        if (kill(-pid, SIGTSTP)==-1) {// Send SIGINT to fg job's process group
+            printf("kill: error\n");
+        } else {
+            printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(pid), pid, sig);
+        }
+    }
     return;
 }
 
