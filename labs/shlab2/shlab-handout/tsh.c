@@ -192,6 +192,10 @@ void eval(char *cmdline)
         if (sigprocmask(SIG_SETMASK, &prev_mask, NULL) == -1)
             {printf("sigprocmask: error\n");exit(0);};
 
+        // put child in a new process group whose group ID is
+        // identical to child's PID
+        setpgid(0, 0);
+
         // execute job in the child context
         int execve_ret = execve(argv[0], argv, environ);
         if (execve_ret < 0) {
@@ -200,7 +204,6 @@ void eval(char *cmdline)
         exit(0);
     }
 
-    setpgid(pid, pid);
     int addjob_ret = addjob(jobs, pid, bg?BG:FG, cmdline);
     if (addjob_ret == 0) printf("Something went wrong\n");
 
