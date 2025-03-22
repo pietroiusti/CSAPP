@@ -290,6 +290,9 @@ int builtin_cmd(char **argv)
     } else if (strcmp(name, "jobs") == 0) {
         listjobs(jobs);
         return 1;
+    } else if (strcmp(name, "bg") == 0 || strcmp(name, "fg") == 0) {
+        do_bgfg(argv);
+        return 1;
     } else {
         return 0;     /* not a builtin command */
     }
@@ -300,6 +303,8 @@ int builtin_cmd(char **argv)
  */
 void do_bgfg(char **argv)
 {
+    printf("nothing so far here :(\n");
+
     return;
 }
 
