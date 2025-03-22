@@ -356,6 +356,12 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig)
 {
+    int pid;
+    if ((pid = fgpid(jobs)) != 0) {
+        // the job's gpid is equal to the job's pid (see call to
+        // setpgid above)
+        kill(-pid, 2); // Send SIGINT to fg job's process group
+    }
     return;
 }
 
