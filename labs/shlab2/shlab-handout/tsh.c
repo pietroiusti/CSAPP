@@ -303,7 +303,29 @@ int builtin_cmd(char **argv)
  */
 void do_bgfg(char **argv)
 {
-    printf("nothing so far here :(\n");
+    if (strcmp(argv[0], "bg") == 0) { // bg
+        int pid = atoi(argv[1]);
+
+        printf("pid: %d\n", pid);
+
+        struct job_t * job = getjobpid(jobs, pid);
+        if (job->state == ST) {
+            printf("sending sigcont to stopped job\n");
+            if (kill(-pid, SIGCONT) == -1) {
+                printf("kill: error\n");
+            }
+            // ???
+            //
+            // in sigchld_handler use WIFCONTINUED to check whether a
+            // child has been resumed. In that case, change its state
+            // from ST to BG; instead of doing it here. I've tried but
+            // WIFCONTINUED does not seem to work as I have expected.
+        } else {
+            printf("what are you doing bro?\n");
+        }
+    } else { // fg
+        printf("nothing so far here :(\n");
+    }
 
     return;
 }
@@ -333,51 +355,26 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig)
 {
-    // printf("sigchld_handler: %d\n", sig);
     for (int i = 0; i < MAXJOBS; i++) {
-        //printf("%d\n", jobs[i].pid);
         pid_t pid = jobs[i].pid;
         if (pid > 0) {
             int status;
-            /*From waitpid man:
-              WNOHANG
-                  return immediately if no child has exited.
-
-              WUNTRACED
-                  also  return  if  a  child  has  stopped  (but  not  traced   via
-                  ptrace(2)).   Status  for  traced  children which have stopped is
-                  provided even if this option is not specified.
-             */
             pid_t ret = waitpid(pid, &status, WNOHANG|WUNTRACED);
 
-            /* if (ret == 0) { */
-            /*     printf("%d has not terminated yet... leaving it in peace\n", pid); */
-            /* } else { */
-            /*     /\* printf("%d has been reaped!!!\n", pid); *\/ */
-            /*     printf("deleting job from job list\n"); */
-            /*     deletejob(jobs, pid); */
-            /* } */
-
-            // printf("hola\n");
-
-            if (ret == 0) {
-                ;
-                //printf("%d has not terminated yet... leaving it in peace\n", pid);
+            if (WIFCONTINUED(status)) {
+                printf("child has been resumed, act accordingly\n");
+                struct job_t *j = getjobpid(jobs, ret);
+                j->state = FG;
             } else if (WIFSTOPPED(status)) {
-                // printf("child has stopped, act accordingly\n");
+                printf("Job [%d] (%d) stopped by signal 2\n", pid2jid(ret), ret);
                 struct job_t *j = getjobpid(jobs, ret);
                 j->state = ST;
-                // printf("hello?\n");
-                // return;
             } else {
-                // printf("child became a zombie, act accordingly\n");
-                /*     printf("deleting job from job list\n"); */
+                printf("child became a zombie, act accordingly\n");
                 deletejob(jobs, pid);
             }
         }
-        // printf("looping\n");
     }
-    // printf("returning\n");
     return;
 }
 
@@ -417,7 +414,7 @@ void sigtstp_handler(int sig)
         if (kill(-pid, SIGTSTP)==-1) {// Send SIGINT to fg job's process group
             printf("kill: error\n");
         } else {
-            printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(pid), pid, sig);
+            //printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(pid), pid, sig);
         }
     }
     return;
