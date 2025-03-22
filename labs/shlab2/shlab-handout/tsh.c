@@ -306,9 +306,7 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
-    // loop while pid is in the job list (sigchld handler removes it
-    // from the list then it terminates)
-    while (getjobpid(jobs, pid) != NULL) {
+    while (getjobpid(jobs, pid) != NULL && getjobpid(jobs, pid)->state == FG) {
         sleep(1);
     }
 
@@ -333,6 +331,7 @@ void sigchld_handler(int sig)
         //printf("%d\n", jobs[i].pid);
         pid_t pid = jobs[i].pid;
         if (pid > 0) {
+            int status;
             /*From waitpid man:
               WNOHANG
                   return immediately if no child has exited.
@@ -342,18 +341,36 @@ void sigchld_handler(int sig)
                   ptrace(2)).   Status  for  traced  children which have stopped is
                   provided even if this option is not specified.
              */
-            pid_t ret = waitpid(pid, NULL, WNOHANG|WUNTRACED);
+            pid_t ret = waitpid(pid, &status, WNOHANG|WUNTRACED);
+
+            /* if (ret == 0) { */
+            /*     printf("%d has not terminated yet... leaving it in peace\n", pid); */
+            /* } else { */
+            /*     /\* printf("%d has been reaped!!!\n", pid); *\/ */
+            /*     printf("deleting job from job list\n"); */
+            /*     deletejob(jobs, pid); */
+            /* } */
+
+            // printf("hola\n");
+
             if (ret == 0) {
                 ;
                 //printf("%d has not terminated yet... leaving it in peace\n", pid);
+            } else if (WIFSTOPPED(status)) {
+                // printf("child has stopped, act accordingly\n");
+                struct job_t *j = getjobpid(jobs, ret);
+                j->state = ST;
+                // printf("hello?\n");
+                // return;
             } else {
-                /* printf("%d has been reaped!!!\n", pid); */
+                // printf("child became a zombie, act accordingly\n");
+                /*     printf("deleting job from job list\n"); */
                 deletejob(jobs, pid);
-                /* printf("deleting job from job list\n"); */
             }
         }
+        // printf("looping\n");
     }
-
+    // printf("returning\n");
     return;
 }
 
