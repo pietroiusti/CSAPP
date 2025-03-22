@@ -360,7 +360,9 @@ void sigint_handler(int sig)
     if ((pid = fgpid(jobs)) != 0) {
         // the job's gpid is equal to the job's pid (see call to
         // setpgid above)
-        kill(-pid, 2); // Send SIGINT to fg job's process group
+        if (kill(-pid, 2)==-1) {// Send SIGINT to fg job's process group
+            printf("kill: error\n");
+        }
     }
     return;
 }
