@@ -172,6 +172,15 @@ void eval(char *cmdline)
     if (builtin_cmd(argv)) return;
     if (argv[0] == NULL) return; // ignore empty lines
 
+    // use sigprocmask to block SIGCHLD (in order to avoid the race
+    // condition where the child is reaped by sigchld_handler before
+    // the parent calls addjob)
+    sigset_t mask, prev_mask;
+    if(sigemptyset(&mask)==-1){printf("sigemptyset: error\n");exit(0);}
+    if(sigaddset(&mask, SIGINT)==-1){printf("sigaddset: error\n");exit(0);}
+    if (sigprocmask(SIG_BLOCK, &mask, &prev_mask) == -1)
+        {printf("sigprocmask: error\n");exit(0);};
+
     pid_t pid = fork();
     if (pid == -1) {
         printf("Error while forking...\n");
@@ -179,6 +188,10 @@ void eval(char *cmdline)
     }
 
     if (pid == 0) { // child
+        // use sigprocmask to unblock SIGCHLD
+        if (sigprocmask(SIG_SETMASK, &prev_mask, NULL) == -1)
+            {printf("sigprocmask: error\n");exit(0);};
+
         // execute job in the child context
         int execve_ret = execve(argv[0], argv, environ);
         if (execve_ret < 0) {
@@ -190,6 +203,10 @@ void eval(char *cmdline)
     setpgid(pid, pid);
     int addjob_ret = addjob(jobs, pid, bg?BG:FG, cmdline);
     if (addjob_ret == 0) printf("Something went wrong\n");
+
+    // use sigprocmask to unblock SIGCHLD
+    if (sigprocmask(SIG_SETMASK, &prev_mask, NULL) == -1)
+        {printf("sigprocmask: error\n");exit(0);}
 
     if (!bg) {
         waitfg(pid);
