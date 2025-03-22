@@ -362,6 +362,8 @@ void sigint_handler(int sig)
         // setpgid above)
         if (kill(-pid, 2)==-1) {// Send SIGINT to fg job's process group
             printf("kill: error\n");
+        } else {
+            printf("Job [%d] (%d) terminated by signal 2\n", pid2jid(pid), pid);
         }
     }
     return;
