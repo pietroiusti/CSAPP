@@ -360,7 +360,7 @@ void sigchld_handler(int sig)
         pid_t pid = jobs[i].pid;
         if (pid > 0) {
             int status;
-            pid_t ret = waitpid(pid, &status, WNOHANG|WUNTRACED);
+            pid_t ret = waitpid(pid, &status, WNOHANG|WUNTRACED|WCONTINUED);
 
             if (WIFCONTINUED(status)) {
                 printf("SIGCHLD_HANDLER: child has been resumed, act accordingly\n");
