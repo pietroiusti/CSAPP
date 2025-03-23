@@ -201,20 +201,20 @@ void eval(char *cmdline)
         if (execve_ret < 0) {
             printf("%s: Command not found.\n", argv[0]);
         }
-        exit(0);
-    }
-
-    int addjob_ret = addjob(jobs, pid, bg?BG:FG, cmdline);
-    if (addjob_ret == 0) printf("Something went wrong\n");
-
-    // use sigprocmask to unblock SIGCHLD
-    if (sigprocmask(SIG_SETMASK, &prev_mask, NULL) == -1)
-        {printf("sigprocmask: error\n");exit(0);}
-
-    if (!bg) {
-        waitfg(pid);
+        //exit(0);
     } else {
-        printf("[%d] (%d) %s", maxjid(jobs), pid, cmdline);
+        int addjob_ret = addjob(jobs, pid, bg?BG:FG, cmdline);
+        if (addjob_ret == 0) printf("Something went wrong\n");
+
+        // use sigprocmask to unblock SIGCHLD
+        if (sigprocmask(SIG_SETMASK, &prev_mask, NULL) == -1)
+            {printf("sigprocmask: error\n");exit(0);}
+
+        if (!bg) {
+            waitfg(pid);
+        } else {
+            printf("[%d] (%d) %s", maxjid(jobs), pid, cmdline);
+        }
     }
 
     return;
@@ -305,10 +305,10 @@ void do_bgfg(char **argv)
 {
     if (strcmp(argv[0], "bg") == 0) { // bg
         int pid = atoi(argv[1]);
-
         printf("pid: %d\n", pid);
 
         struct job_t * job = getjobpid(jobs, pid);
+
         if (job->state == ST) {
             printf("sending sigcont to stopped job\n");
             if (kill(-pid, SIGCONT) == -1) {
@@ -355,6 +355,7 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig)
 {
+    printf("SIGCHLD_HANDLER (%d)\n", sig);
     for (int i = 0; i < MAXJOBS; i++) {
         pid_t pid = jobs[i].pid;
         if (pid > 0) {
@@ -362,17 +363,37 @@ void sigchld_handler(int sig)
             pid_t ret = waitpid(pid, &status, WNOHANG|WUNTRACED);
 
             if (WIFCONTINUED(status)) {
-                printf("child has been resumed, act accordingly\n");
-                struct job_t *j = getjobpid(jobs, ret);
-                j->state = FG;
+                printf("SIGCHLD_HANDLER: child has been resumed, act accordingly\n");
+                /* struct job_t *j = getjobpid(jobs, ret); */
+                /* j->state = FG; */
             } else if (WIFSTOPPED(status)) {
-                printf("Job [%d] (%d) stopped by signal 2\n", pid2jid(ret), ret);
+                printf("SIGCHLD_HANDLER: WIFSTOPPED\n");
+                //printf("Job [%d] (%d) stopped by signal 2\n", pid2jid(ret), ret);
+
                 struct job_t *j = getjobpid(jobs, ret);
                 j->state = ST;
-            } else {
-                printf("child became a zombie, act accordingly\n");
-                deletejob(jobs, pid);
+            } else if (ret != 0) {
+                printf("SIGCHLD_HANDLER. Neither WIFCONTINUED nor WIFSTOPPED (%d)\n", pid);
+                
+                if (WIFSIGNALED(status)) { // terminated by a signal
+                    printf("WIFSIGNALED\n");
+                    printf("WTERMSIG: %d\n", WTERMSIG(status));
+                    if (WTERMSIG(status) == SIGINT) {
+                        printf("DELETING JOB %d\n", pid);
+                        deletejob(jobs, pid);                        
+                    }
+                } else { // process terminated on its own
+                    if (WIFEXITED(status)) {
+                        printf("CHILD TERMINATED NORMALLY\n");
+                        printf("exit status: %d\n", WEXITSTATUS(status));
+                        printf("DELETING JOB %d\n", pid);
+                        deletejob(jobs, pid);
+                    }
+                }
+
             }
+        } else if (pid == 0) {
+            //printf("!!!\n");
         }
     }
     return;
@@ -385,7 +406,7 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig)
 {
-    // printf("sigint_handler: %d\n", sig);
+    printf("SIGINT_HANDLER (%d)\n", sig);
     int pid;
     if ((pid = fgpid(jobs)) != 0) {
         // the job's gpid is equal to the job's pid (see call to
@@ -393,7 +414,9 @@ void sigint_handler(int sig)
         if (kill(-pid, SIGINT)==-1) {// Send SIGINT to fg job's process group
             printf("kill: error\n");
         } else {
-            printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, sig);
+            printf("Sending kill to Job [%d] (%d) \n", pid2jid(pid), pid);
+            // the following should be in the sigchld handler I guess...
+            //printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, sig);
         }
     }
     return;
@@ -406,7 +429,7 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig)
 {
-    // printf("sigtstp_handler: %d\n", sig);
+    printf("SIGTSTP_HANDLER (%d)\n", sig);
     int pid;
     if ((pid = fgpid(jobs)) != 0) {
         // the job's gpid is equal to the job's pid (see call to
@@ -414,6 +437,9 @@ void sigtstp_handler(int sig)
         if (kill(-pid, SIGTSTP)==-1) {// Send SIGINT to fg job's process group
             printf("kill: error\n");
         } else {
+            /* struct job_t *j = getjobpid(jobs, pid); */
+            /* j->state = FG; */
+
             //printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(pid), pid, sig);
         }
     }
