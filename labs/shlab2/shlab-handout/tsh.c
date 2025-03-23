@@ -303,14 +303,18 @@ int builtin_cmd(char **argv)
 void do_bgfg(char **argv)
 {
     if (strcmp(argv[0], "bg") == 0) { // bg
-        int pid = atoi(argv[1]);
-        printf("pid: %d\n", pid);
-        struct job_t * job = getjobpid(jobs, pid);
+        struct job_t *job;
+        int is_jid = argv[1][0] == '%';
+        char *jid = (argv[1])+1;
+        //int pid = atoi(argv[1]);
+        //printf("pid: %d\n", pid);
+        //printf("jid: %s\n", jid);
+        job = is_jid ? getjobjid(jobs, atoi(jid)) : getjobpid(jobs, atoi(argv[1]));
         if (job->state == ST) {
             printf("turning job state from ST to BG\n");
             job->state = BG;
             printf("sending sigcont to stopped job\n");
-            if (kill(-pid, SIGCONT) == -1) {
+            if (kill(-(job->pid), SIGCONT) == -1) {
                 printf("kill: error\n");
             }
             // in sigchld_handler use WIFCONTINUED to check whether a
@@ -322,21 +326,24 @@ void do_bgfg(char **argv)
             printf("what are you doing bro?\n");
         }
     } else if (strcmp(argv[0], "fg") == 0) { // fg
-        int pid = atoi(argv[1]);
-        printf("pid: %d\n", pid);
-        struct job_t * job = getjobpid(jobs, pid);
+        struct job_t *job;
+        int is_jid = argv[1][0] == '%';
+        char *jid = (argv[1])+1;
+        //int pid = atoi(argv[1]);
+        job = is_jid ? getjobjid(jobs, atoi(jid)) : getjobpid(jobs, atoi(argv[1]));
+        //printf("pid: %d\n", pid);
         if (job->state == ST || job->state == BG) {
             printf("turning job state from ST to BG\n");
             job->state = FG;
             printf("sending sigcont to stopped job\n");
-            if (kill(-pid, SIGCONT) == -1) {
+            if (kill(-(job->pid), SIGCONT) == -1) {
                 printf("kill: error\n");
             }
             // in sigchld_handler use WIFCONTINUED to check whether a
             // child has been resumed. (Initially I thought that I
             // should change the state of the job in the
             // sigchld_handler but probably I have to change it here.)
-            waitfg(pid);
+            waitfg(job->pid);
         } else {
             printf("what are you doing bro?\n");
         }
@@ -388,14 +395,14 @@ void sigchld_handler(int sig)
                 j->state = ST;
             } else if (ret != 0) {
                 printf("SIGCHLD_HANDLER. Neither WIFCONTINUED nor WIFSTOPPED (%d)\n", pid);
-                
+
                 if (WIFSIGNALED(status)) { // terminated by a signal
                     printf("WIFSIGNALED\n");
                     printf("WTERMSIG: %d\n", WTERMSIG(status));
                     if (WTERMSIG(status) == SIGINT) {
                         printf("DELETING JOB %d\n", pid);
                         printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
-                        deletejob(jobs, pid);                        
+                        deletejob(jobs, pid);
                     }
                 } else { // process terminated on its own
                     if (WIFEXITED(status)) {
