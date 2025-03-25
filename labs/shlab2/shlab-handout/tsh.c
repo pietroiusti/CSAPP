@@ -386,8 +386,13 @@ void sigchld_handler(int sig)
             } else if (WIFSTOPPED(status)) {
                 //printf("SIGCHLD_HANDLER: WIFSTOPPED\n");
                 //printf("Job [%d] (%d) stopped by signal 2\n", pid2jid(ret), ret);
-                struct job_t *j = getjobpid(jobs, ret);
-                j->state = ST;
+
+                /*
+                  see sigtstp_handler for why the following two lines are
+                  commented out
+                 */
+                //struct job_t *j = getjobpid(jobs, ret);
+                //j->state = ST;
             } else if (ret != 0) {
                 //printf("SIGCHLD_HANDLER. Neither WIFCONTINUED nor WIFSTOPPED (%d)\n", pid);
 
@@ -447,6 +452,17 @@ void sigtstp_handler(int sig)
         if (kill(-pid, SIGTSTP)==-1) { // Send SIGINT to fg job's process group
             printf("kill: error\n");
         }
+
+        /*
+          It makes more sense to me to set the job's state to ST in
+          the sigchld handler. Things seem to work if I do so, but
+          running the shell driver on the trace file 09 (`make
+          test09~) gives an incorrect output (that is, a different
+          output that that given by `make rtest09`). So I'm setting
+          the job's state here.
+         */
+        struct job_t *job = getjobpid(jobs, pid);
+        job->state = ST;
     }
     return;
 }
