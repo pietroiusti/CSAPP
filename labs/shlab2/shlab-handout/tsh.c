@@ -290,7 +290,10 @@ int builtin_cmd(char **argv)
         listjobs(jobs);
         return 1;
     } else if (strcmp(name, "bg") == 0 || strcmp(name, "fg") == 0) {
-        do_bgfg(argv);
+        if (argv[1] == NULL)
+            printf("fg command requires PID or %%jobid argument\n");
+        else
+            do_bgfg(argv);
         return 1;
     } else {
         return 0;     /* not a builtin command */
