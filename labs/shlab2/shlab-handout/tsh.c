@@ -319,6 +319,7 @@ void do_bgfg(char **argv)
             if (kill(-(job->pid), SIGCONT) == -1) {
                 printf("kill: error\n");
             }
+            printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
         } else {
             printf("what are you doing bro?\n");
         }
@@ -463,6 +464,7 @@ void sigtstp_handler(int sig)
          */
         struct job_t *job = getjobpid(jobs, pid);
         job->state = ST;
+        printf("Job [%d] (%d) stopped by signal %d\n", job->jid, job->pid, SIGTSTP);
     }
     return;
 }
