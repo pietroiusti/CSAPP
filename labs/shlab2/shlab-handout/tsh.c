@@ -292,10 +292,41 @@ int builtin_cmd(char **argv)
         listjobs(jobs);
         return 1;
     } else if (strcmp(name, "bg") == 0 || strcmp(name, "fg") == 0) {
-        if (argv[1] == NULL)
-            printf("fg command requires PID or %%jobid argument\n");
-        else
-            do_bgfg(argv);
+        // stop if something is wrong
+        if (argv[1] == NULL) {
+            printf("%s command requires PID or %%jobid argument\n", name);
+            return 1;
+        } else if (argv[1][0] != '%') {
+            // make sure argv[1] is a number
+            char *endptr;
+            errno = 0;
+            long num = strtol(argv[1], &endptr, 10);
+            if (errno != 0 || *endptr != '\0' || argv[1] == endptr) {
+                printf("%s: argument must be a PID or %%jobid\n", name);
+                return 1;
+            }
+            struct job_t *job = getjobpid(jobs, num);
+            if (job == NULL) {
+                printf("(%lu): No such process\n", num);
+                return 1;
+            }
+        } else if (argv[1][0] == '%') {
+            // make sure argv[1] without the first character is a number
+            char *endptr;
+            errno = 0;
+            long num = strtol((argv[1])+1, &endptr, 10);
+            if (errno != 0 || *endptr != '\0' || argv[1] == endptr) {
+                printf("%s: argument must be a PID or %%jobid\n", name);
+                return 1;
+            }
+            struct job_t *job = getjobjid(jobs, num);
+            if (job == NULL) {
+                printf("%%%lu: No such job\n", num);
+                return 1;
+            }
+        }
+        // go on, perform bg/fg command
+        do_bgfg(argv);
         return 1;
     } else {
         return 0;     /* not a builtin command */
