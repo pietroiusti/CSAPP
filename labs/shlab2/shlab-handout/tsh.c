@@ -199,9 +199,11 @@ void eval(char *cmdline)
         // execute job in the child context
         int execve_ret = execve(argv[0], argv, environ);
         if (execve_ret < 0) {
-            printf("%s: Command not found.\n", argv[0]);
+            printf("%s: Command not found\n", argv[0]);
         }
-    } else {
+
+	exit(0);//<<<<<<<<<<<<< How was I missing that?
+    } else { // parent
         int addjob_ret = addjob(jobs, pid, bg?BG:FG, cmdline);
         if (addjob_ret == 0) printf("Something went wrong\n");
 
@@ -430,23 +432,57 @@ void sigchld_handler(int sig)
                  */
                 //struct job_t *j = getjobpid(jobs, ret);
                 //j->state = ST;
+
+
+                struct job_t *j = getjobpid(jobs, ret);
+                if (j->state != ST) {
+                    // something other than the user (ctrl-z) sent a
+                    // stop signal!
+
+                    j->state = ST;
+
+                    // should I send the stop signal to the job's
+                    // group?
+                }
+
+
             } else if (ret != 0) {
-                //printf("SIGCHLD_HANDLER. Neither WIFCONTINUED nor WIFSTOPPED (%d)\n", pid);
+                /* printf("SIGCHLD_HANDLER. Neither WIFCONTINUED nor WIFSTOPPED (%d)\n", pid); */
 
                 if (WIFSIGNALED(status)) { // terminated by a signal
-                    //printf("WIFSIGNALED\n");
-                    //printf("WTERMSIG: %d\n", WTERMSIG(status));
-                    if (WTERMSIG(status) == SIGINT) {
+                    /* printf("WIFSIGNALED\n"); */
+                    /* printf("WTERMSIG: %d\n", WTERMSIG(status)); */
+
+                    // commenting the conditional: I could stop the
+                    // process, say, by sending a sigkill from another
+                    // process. Was the conditional taking care of
+                    // something I don't remember? If we are here, the
+                    // child has been terminated, so it should be fine
+                    // without it... shouldn't it?
+
+                    //if (WTERMSIG(status) == SIGINT) {
                         //printf("DELETING JOB %d\n", pid);
-                        printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
-                        deletejob(jobs, pid);
-                    }
+
+		    //struct job_t *j = getjobpid(jobs, ret);
+		    //if (j->state == UNDEF) {
+			// if the state is undef it means the job has
+			// been terminated by a signal sent by the
+			// parent (the user hit ctrl-c)
+			//printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
+		    //}
+
+		    deletejob(jobs, pid);
+                    //}
+
                 } else { // process terminated on its own
                     if (WIFEXITED(status)) {
-                        //printf("CHILD TERMINATED NORMALLY\n");
+                        /* printf("CHILD TERMINATED NORMALLY\n"); */
                         //printf("exit status: %d\n", WEXITSTATUS(status));
                         //printf("DELETING JOB %d\n", pid);
                         deletejob(jobs, pid);
+                    } else {
+			;
+                        //printf("WHHHHAAAAAAATTTTT\n");
                     }
                 }
             }
@@ -469,6 +505,9 @@ void sigint_handler(int sig)
         // setpgid above)
         if (kill(-pid, SIGINT)==-1) {// Send SIGINT to fg job's process group
             printf("kill: error\n");
+        } else {
+	    // see comment in sigtstp_hander. it applies here too, mutatis mutandis.
+	    printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, SIGINT);
         }
     }
     return;
