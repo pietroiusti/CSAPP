@@ -284,6 +284,8 @@ int builtin_cmd(char **argv)
 {
     char *name = argv[0];
 
+    if (name == NULL) return 1; //ignore empty lines
+
     if (strcmp(name, "quit") == 0) {
         exit(0);
     } else if (strcmp(name, "jobs") == 0) {
