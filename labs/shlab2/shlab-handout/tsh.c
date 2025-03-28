@@ -354,7 +354,9 @@ void do_bgfg(char **argv)
             // state of the job in the sigchld_handler but probably I
             // have to change it here.)
             //printf("sending sigcont to stopped job\n");
-            if (kill(-(job->pid), SIGCONT) == -1) {
+	    int pid = job->pid;
+
+            if (kill(-pid, SIGCONT) == -1) {
                 printf("kill: error\n");
             }
             printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
@@ -370,7 +372,9 @@ void do_bgfg(char **argv)
             //printf("turning job state from ST to BG\n");
             job->state = FG;
             //printf("sending sigcont to stopped job\n");
-            if (kill(-(job->pid), SIGCONT) == -1) {
+	    int pid = job->pid;
+
+            if (kill(-pid, SIGCONT) == -1) {
                 printf("kill: error\n");
             }
             // in sigchld_handler use WIFCONTINUED to check whether a
@@ -513,6 +517,19 @@ void sigint_handler(int sig)
     return;
 }
 
+
+/* TODO: fix following bug. */
+
+/* [gp@host-667 shlab-handout]$ ./tsh */
+/* tsh> ./myspin 3000 & */
+/* [1] (380834) ./myspin 3000 & */
+/* tsh> ./myspin 4000 & */
+/* [2] (380835) ./myspin 4000 & */
+/* tsh> fg %1 */
+/* ^ZJob [1] (380834) stopped by signal 20 */
+/* tsh> Segmentation fault (core dumped) */
+
+
 /*
  * sigtstp_handler - The kernel sends a SIGTSTP to the shell whenever
  *     the user types ctrl-z at the keyboard. Catch it and suspend the
@@ -523,6 +540,11 @@ void sigtstp_handler(int sig)
     //printf("SIGTSTP_HANDLER (%d)\n", sig);
     int pid;
     if ((pid = fgpid(jobs)) != 0) {
+
+	struct job_t *job = getjobpid(jobs, pid);
+	/* int jid = job->jid; */
+	/* int pid = job->pid; */
+
         // the job's gpid is equal to the job's pid (see call to
         // setpgid above)
         if (kill(-pid, SIGTSTP)==-1) { // Send SIGINT to fg job's process group
@@ -537,9 +559,10 @@ void sigtstp_handler(int sig)
           output that that given by `make rtest09`). So I'm setting
           the job's state here.
          */
-        struct job_t *job = getjobpid(jobs, pid);
+
         job->state = ST;
         printf("Job [%d] (%d) stopped by signal %d\n", job->jid, job->pid, SIGTSTP);
+	//printf("Job [%d] (%d) stopped by signal %d\n", jid, pid, SIGTSTP);
     }
     return;
 }
