@@ -417,83 +417,80 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig)
 {
-    //printf("SIGCHLD_HANDLER (%d)\n", sig);
+    // printf("SIGCHLD_HANDLER (%d)\n", sig);
     for (int i = 0; i < MAXJOBS; i++) {
         pid_t pid = jobs[i].pid;
-        if (pid > 0) {
-            int status;
-            pid_t ret = waitpid(pid, &status, WNOHANG|WUNTRACED|WCONTINUED);
 
-            if (WIFCONTINUED(status)) {
-                //printf("SIGCHLD_HANDLER: child has been resumed: %d\n", pid);
-            } else if (WIFSTOPPED(status)) {
-                //printf("SIGCHLD_HANDLER: WIFSTOPPED\n");
-                //printf("Job [%d] (%d) stopped by signal 2\n", pid2jid(ret), ret);
+	if (pid == 0) continue; // break?
 
-                /*
-                  see sigtstp_handler for why the following two lines are
-                  commented out
-                 */
-                //struct job_t *j = getjobpid(jobs, ret);
-                //j->state = ST;
+	int status;
+	pid_t ret = waitpid(pid, &status, WNOHANG|WUNTRACED|WCONTINUED);
 
+	if (ret == 0) continue;
 
-                struct job_t *j = getjobpid(jobs, ret);
-                if (j->state != ST) {
-                    // something other than the user (ctrl-z) sent a
-                    // stop signal!
+	if (WIFCONTINUED(status)) {
+	    //printf("SIGCHLD_HANDLER: child has been resumed: %d\n", pid);
+	} else if (WIFSTOPPED(status)) {
+	    //printf("SIGCHLD_HANDLER: WIFSTOPPED\n");
+	    //printf("Job [%d] (%d) stopped by signal 2\n", pid2jid(ret), ret);
 
-                    j->state = ST;
-
-                    // should I send the stop signal to the job's
-                    // group?
-                }
+	    /*
+	      see sigtstp_handler for why the following two lines are
+	      commented out
+	    */
+	    //struct job_t *j = getjobpid(jobs, ret);
+	    //j->state = ST;
 
 
-            } else if (ret != 0) {
-                /* printf("SIGCHLD_HANDLER. Neither WIFCONTINUED nor WIFSTOPPED (%d)\n", pid); */
+	    struct job_t *j = getjobpid(jobs, ret);
+	    if (j->state != ST) {
+		// something other than the user (ctrl-z) sent a
+		// stop signal!
 
-                if (WIFSIGNALED(status)) { // terminated by a signal
-                    /* printf("WIFSIGNALED\n"); */
-                    /* printf("WTERMSIG: %d\n", WTERMSIG(status)); */
+		j->state = ST;
 
-                    // commenting the conditional: I could stop the
-                    // process, say, by sending a sigkill from another
-                    // process. Was the conditional taking care of
-                    // something I don't remember? If we are here, the
-                    // child has been terminated, so it should be fine
-                    // without it... shouldn't it?
+		// should I send the stop signal to the job's
+		// group?
+	    }
+	} else if (WIFSIGNALED(status)) { // terminated by a signal
+	    /* printf("WIFSIGNALED\n"); */
+	    /* printf("WTERMSIG: %d\n", WTERMSIG(status)); */
 
-                    //if (WTERMSIG(status) == SIGINT) {
-                        //printf("DELETING JOB %d\n", pid);
+	    // commenting the conditional: I could stop the
+	    // process, say, by sending a sigkill from another
+	    // process. Was the conditional taking care of
+	    // something I don't remember? If we are here, the
+	    // child has been terminated, so it should be fine
+	    // without it... shouldn't it?
 
-		    //struct job_t *j = getjobpid(jobs, ret);
-		    //if (j->state == UNDEF) {
-			// if the state is undef it means the job has
-			// been terminated by a signal sent by the
-			// parent (the user hit ctrl-c)
-			//printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
-		    //}
+	    //if (WTERMSIG(status) == SIGINT) {
+	    //printf("DELETING JOB %d\n", pid);
 
-		    deletejob(jobs, pid);
-                    //}
+	    //struct job_t *j = getjobpid(jobs, ret);
+	    //if (j->state == UNDEF) {
+	    // if the state is undef it means the job has
+	    // been terminated by a signal sent by the
+	    // parent (the user hit ctrl-c)
+	    //printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
+	    //}
 
-                } else { // process terminated on its own
-                    if (WIFEXITED(status)) {
-                        /* printf("CHILD TERMINATED NORMALLY\n"); */
-                        //printf("exit status: %d\n", WEXITSTATUS(status));
-                        //printf("DELETING JOB %d\n", pid);
-                        deletejob(jobs, pid);
-                    } else {
-			;
-                        //printf("WHHHHAAAAAAATTTTT\n");
-                    }
-                }
-            }
-        }
+	    deletejob(jobs, pid);
+	    //}
+	} else {// process terminated on its own
+	    if (WIFEXITED(status)) {
+		/* printf("CHILD TERMINATED NORMALLY\n"); */
+		//printf("exit status: %d\n", WEXITSTATUS(status));
+		//printf("DELETING JOB %d\n", pid);
+		deletejob(jobs, pid);
+	    } else {
+		;
+		printf("WHHHHAAAAAAATTTTT\n");
+	    }
+	}
+	return;
     }
-    return;
 }
+
 
 /*
  * sigint_handler - The kernel sends a SIGINT to the shell whenver the
@@ -516,19 +513,6 @@ void sigint_handler(int sig)
     }
     return;
 }
-
-
-/* TODO: fix following bug. */
-
-/* [gp@host-667 shlab-handout]$ ./tsh */
-/* tsh> ./myspin 3000 & */
-/* [1] (380834) ./myspin 3000 & */
-/* tsh> ./myspin 4000 & */
-/* [2] (380835) ./myspin 4000 & */
-/* tsh> fg %1 */
-/* ^ZJob [1] (380834) stopped by signal 20 */
-/* tsh> Segmentation fault (core dumped) */
-
 
 /*
  * sigtstp_handler - The kernel sends a SIGTSTP to the shell whenever
