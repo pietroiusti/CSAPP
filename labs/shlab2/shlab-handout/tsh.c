@@ -434,7 +434,7 @@ void sigchld_handler(int sig)
 
 	    struct job_t *j = getjobpid(jobs, ret);
 	    if (j->state != UNDEF) {
-		printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(ret), ret, WTERMSIG(status));
+		printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(ret), ret, WSTOPSIG(status));
 	    }
 
 
