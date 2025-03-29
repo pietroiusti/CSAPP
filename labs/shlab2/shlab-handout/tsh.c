@@ -179,13 +179,13 @@ void eval(char *cmdline)
     if (sigprocmask(SIG_BLOCK, &mask, &prev_mask) == -1)
         {printf("sigprocmask: error\n");exit(0);};
 
-    pid_t pid = fork();
-    if (pid == -1) {
+    pid_t cpid = fork();
+    if (cpid == -1) {
         printf("Error while forking...\n");
         exit(2);
     }
 
-    if (pid == 0) { // child
+    if (cpid == 0) { // child
         /* use sigprocmask to unblock SIGCHLD (see above) */
         if (sigprocmask(SIG_SETMASK, &prev_mask, NULL) == -1)
             {printf("sigprocmask: error\n");exit(0);};
@@ -202,7 +202,7 @@ void eval(char *cmdline)
 
 	exit(0);
     } else { // parent
-        int addjob_ret = addjob(jobs, pid, bg?BG:FG, cmdline);
+        int addjob_ret = addjob(jobs, cpid, bg?BG:FG, cmdline);
         if (addjob_ret == 0) printf("Something went wrong\n");
 
         /* use sigprocmask to unblock SIGCHLD (see above) */
@@ -210,9 +210,9 @@ void eval(char *cmdline)
             {printf("sigprocmask: error\n");exit(0);}
 
         if (!bg) {
-            waitfg(pid);
+            waitfg(cpid);
         } else {
-            printf("[%d] (%d) %s", maxjid(jobs), pid, cmdline);
+            printf("[%d] (%d) %s", maxjid(jobs), cpid, cmdline);
         }
     }
 
