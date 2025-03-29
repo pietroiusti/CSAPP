@@ -344,16 +344,8 @@ void do_bgfg(char **argv)
         char *jid = (argv[1])+1;
         job = is_jid ? getjobjid(jobs, atoi(jid)) : getjobpid(jobs, atoi(argv[1]));
         if (job->state == ST) {
-            //printf("turning job state from ST to BG\n");
             job->state = BG;
-            // in sigchld_handler use WIFCONTINUED to check whether a
-            // child has been resumed. (I don't think I have to use it
-            // though. Initially I thought that I should change the
-            // state of the job in the sigchld_handler but probably I
-            // have to change it here.)
-            //printf("sending sigcont to stopped job\n");
 	    int pid = job->pid;
-
             if (kill(-pid, SIGCONT) == -1) {
                 printf("kill: error\n");
             }
@@ -367,18 +359,11 @@ void do_bgfg(char **argv)
         char *jid = (argv[1])+1;
         job = is_jid ? getjobjid(jobs, atoi(jid)) : getjobpid(jobs, atoi(argv[1]));
         if (job->state == ST || job->state == BG) {
-            //printf("turning job state from ST to BG\n");
             job->state = FG;
-            //printf("sending sigcont to stopped job\n");
 	    int pid = job->pid;
-
             if (kill(-pid, SIGCONT) == -1) {
                 printf("kill: error\n");
             }
-            // in sigchld_handler use WIFCONTINUED to check whether a
-            // child has been resumed. (Initially I thought that I
-            // should change the state of the job in the
-            // sigchld_handler but probably I have to change it here.)
             waitfg(job->pid);
         } else {
             printf("what are you doing bro?\n");
@@ -386,7 +371,6 @@ void do_bgfg(char **argv)
     } else {
         printf("???\n");
     }
-
     return;
 }
 
@@ -415,11 +399,10 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig)
 {
-    // printf("SIGCHLD_HANDLER (%d)\n", sig);
     for (int i = 0; i < MAXJOBS; i++) {
         pid_t pid = jobs[i].pid;
 
-	if (pid == 0) continue; // break?
+	if (pid == 0) continue; // better to break?
 
 	int status;
 	pid_t ret = waitpid(pid, &status, WNOHANG|WUNTRACED|WCONTINUED);
@@ -429,67 +412,28 @@ void sigchld_handler(int sig)
 	if (WIFCONTINUED(status)) {
 	    //printf("SIGCHLD_HANDLER: child has been resumed: %d\n", pid);
 	} else if (WIFSTOPPED(status)) {
-	    //printf("SIGCHLD_HANDLER: WIFSTOPPED\n");
-
-
 	    struct job_t *j = getjobpid(jobs, ret);
+	    /* if the state is undef it means the job has been
+	       terminated by a signal sent by the parent (the user hit
+	       ctrl-c). See sigint_handler. */
 	    if (j->state != UNDEF) {
 		printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(ret), ret, WSTOPSIG(status));
 	    }
-
-
-
-	    /*
-	      see sigtstp_handler for why the following two lines are
-	      commented out
-	    */
-	    //struct job_t *j = getjobpid(jobs, ret);
-	    //j->state = ST;
-
-
-	    //struct job_t *j = getjobpid(jobs, ret);
-	    //if (j->state != ST) {
-		// something other than the user (ctrl-z) sent a
-		// stop signal!
-
 	    j->state = ST;
-
-		// should I send the stop signal to the job's
-		// group?
-		//}
-
 	} else if (WIFSIGNALED(status)) { // terminated by a signal
-	    //printf("WIFSIGNALED\n");
-	    /* printf("WTERMSIG: %d\n", WTERMSIG(status)); */
-
-	    // commenting the conditional: I could stop the
-	    // process, say, by sending a sigkill from another
-	    // process. Was the conditional taking care of
-	    // something I don't remember? If we are here, the
-	    // child has been terminated, so it should be fine
-	    // without it... shouldn't it?
-
-	    //if (WTERMSIG(status) == SIGINT) {
-	    //printf("DELETING JOB %d\n", pid);
-
 	    struct job_t *j = getjobpid(jobs, ret);
 	    if (j->state != UNDEF) {
-	    // if the state is undef it means the job has been
-	    // terminated by a signal sent by the parent (the user hit
-	    // ctrl-c). See sigint_handler.
-	    printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
+	 	/* if the state is undef it means the job has been
+	           terminated by a signal sent by the parent (the user hit
+	           ctrl-c). See sigint_handler. */
+		printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
 	    }
-
 	    deletejob(jobs, pid);
-	    //}
 	} else {// process terminated on its own
 	    if (WIFEXITED(status)) {
-		//printf("CHILD TERMINATED NORMALLY\n");
-		//printf("exit status: %d\n", WEXITSTATUS(status));
-		//printf("DELETING JOB %d\n", pid);
+		/*CHILD TERMINATED NORMALLY */
 		deletejob(jobs, pid);
 	    } else {
-		;
 		printf("WHHHHAAAAAAATTTTT\n");
 	    }
 	}
@@ -504,19 +448,17 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig)
 {
-    //printf("SIGINT_HANDLER (%d)\n", sig);
     int pid;
     if ((pid = fgpid(jobs)) != 0) {
-        // the job's gpid is equal to the job's pid (see call to
-        // setpgid above)
+        /* the job's gpid is equal to the job's pid (see call to
+           setpgid above) */
         if (kill(-pid, SIGINT)==-1) {// Send SIGINT to fg job's process group
             printf("kill: error\n");
         } else {
-
 	    struct job_t *job = getjobpid(jobs, pid);
-	    job->state = UNDEF;
-
-	    // see comment in sigtstp_hander. it applies here too, mutatis mutandis.
+	    job->state = UNDEF; // let the sigchld_handler know that
+				// the job has been interrupted by
+				// this function
 	    printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, SIGINT);
         }
     }
@@ -530,36 +472,15 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig)
 {
-    //printf("SIGTSTP_HANDLER (%d)\n", sig);
     int pid;
     if ((pid = fgpid(jobs)) != 0) {
-
 	struct job_t *job = getjobpid(jobs, pid);
-	/* int jid = job->jid; */
-	/* int pid = job->pid; */
-
-        // the job's gpid is equal to the job's pid (see call to
-        // setpgid above)
         if (kill(-pid, SIGTSTP)==-1) { // Send SIGINT to fg job's process group
             printf("kill: error\n");
         }
-
-
-	job->state = UNDEF;
-
-
-        /*
-          It makes more sense to me to set the job's state to ST in
-          the sigchld handler. Things seem to work if I do so, but
-          running the shell driver on the trace file 09 (`make
-          test09~) gives an incorrect output (that is, a different
-          output that that given by `make rtest09`). So I'm setting
-          the job's state here.
-         */
-
-        /* job->state = ST; */
+	job->state = UNDEF; // let the sigchld_handler know that the
+			    // job has been stopped by this function
         printf("Job [%d] (%d) stopped by signal %d\n", job->jid, job->pid, SIGTSTP);
-	//printf("Job [%d] (%d) stopped by signal %d\n", jid, pid, SIGTSTP);
     }
     return;
 }
